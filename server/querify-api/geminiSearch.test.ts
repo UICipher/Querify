@@ -5,7 +5,7 @@ import {
   requestGeminiResearch,
 } from "./geminiSearch";
 
-function groundedPayload(sourceUrl = "https://example.com/report") {
+function interactionsPayload(sourceUrl = "https://example.com/report") {
   const answer = "Current answer with evidence.";
   return {
     steps: [
@@ -32,6 +32,23 @@ function groundedPayload(sourceUrl = "https://example.com/report") {
   };
 }
 
+function generateContentPayload(sourceUrl = "https://example.com/report") {
+  const answer = "Current answer with evidence.";
+  return {
+    candidates: [{
+      content: { parts: [{ text: answer }] },
+      groundingMetadata: {
+        searchEntryPoint: { renderedContent: "<div>Google Search suggestions</div>" },
+        groundingChunks: [{ web: { uri: sourceUrl, title: "Example report" } }],
+        groundingSupports: [{
+          segment: { startIndex: 0, endIndex: answer.length, text: answer },
+          groundingChunkIndices: [0],
+        }],
+      },
+    }],
+  };
+}
+
 afterEach(() => {
   vi.unstubAllEnvs();
   vi.unstubAllGlobals();
@@ -46,10 +63,10 @@ describe("Gemini Google Search grounding client", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it("calls the Interactions API with Google Search and returns URL citations", async () => {
+  it("uses Interactions API for Gemini 3 and returns URL citations", async () => {
     vi.stubEnv("QUERIFY_GEMINI_API_KEY", "server-only-test-key");
     vi.stubEnv("QUERIFY_GEMINI_MODEL", "gemini-3.8-flash");
-    const fetchMock = vi.fn(async () => new Response(JSON.stringify(groundedPayload()), {
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify(interactionsPayload()), {
       status: 200,
       headers: { "Content-Type": "application/json" },
     }));
@@ -71,27 +88,35 @@ describe("Gemini Google Search grounding client", () => {
     expect(requestBody.tools).toEqual([{ type: "google_search" }]);
     expect(requestBody.input).toContain("climate policy");
     expect(requestBody.temperature).toBeUndefined();
-    expect(requestBody.generation_config).toBeUndefined();
   });
 
-  it("defaults to Gemini 2.5 Flash when no model override is configured", async () => {
+  it("defaults to Gemini 2.5 Flash GenerateContent and parses grounding metadata", async () => {
     vi.stubEnv("QUERIFY_GEMINI_API_KEY", "server-only-test-key");
     vi.stubEnv("QUERIFY_GEMINI_MODEL", "");
-    const fetchMock = vi.fn(async () => new Response(JSON.stringify(groundedPayload()), { status: 200 }));
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify(generateContentPayload()), { status: 200 }));
     vi.stubGlobal("fetch", fetchMock);
 
-    await requestGeminiResearch("Any topic?");
-    const [, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
-    expect(JSON.parse(String(init.body)).model).toBe("gemini-2.5-flash");
+    const result = await requestGeminiResearch("Give me current climate policy sources.");
+    expect(result.answer).toBe("Current answer with evidence.");
+    expect(result.sources).toEqual([
+      { title: "Example report", url: "https://example.com/report" },
+    ]);
+    expect(result.citations).toEqual([{ endIndex: 29, sourceIndices: [0] }]);
+    expect(result.searchSuggestionsHtml).toContain("Google Search suggestions");
+
+    const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
+    expect(url).toBe("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent");
+    const requestBody = JSON.parse(String(init.body));
+    expect(requestBody.tools).toEqual([{ googleSearchRetrieval: {} }]);
+    expect(requestBody.contents[0].parts[0].text).toContain("climate policy");
+    expect(requestBody.temperature).toBeUndefined();
   });
 
   it("rejects an answer when Google returns no grounded citations or suggestions", async () => {
     vi.stubEnv("QUERIFY_GEMINI_API_KEY", "server-only-test-key");
+    vi.stubEnv("QUERIFY_GEMINI_MODEL", "");
     vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({
-      steps: [{
-        type: "model_output",
-        content: [{ type: "text", text: "Uncited answer.", annotations: [] }],
-      }],
+      candidates: [{ content: { parts: [{ text: "Uncited answer." }] } }],
     }), { status: 200 })));
     await expect(requestGeminiResearch("Any question?"))
       .rejects.toBeInstanceOf(GeminiResearchProviderError);
@@ -99,8 +124,9 @@ describe("Gemini Google Search grounding client", () => {
 
   it("rejects insecure source links and does not present them as citations", async () => {
     vi.stubEnv("QUERIFY_GEMINI_API_KEY", "server-only-test-key");
+    vi.stubEnv("QUERIFY_GEMINI_MODEL", "");
     vi.stubGlobal("fetch", vi.fn(async () => new Response(
-      JSON.stringify(groundedPayload("http://example.com/report")),
+      JSON.stringify(generateContentPayload("http://example.com/report")),
       { status: 200 }
     )));
     await expect(requestGeminiResearch("Any question?"))
@@ -109,6 +135,7 @@ describe("Gemini Google Search grounding client", () => {
 
   it("preserves provider HTTP status for safe error diagnosis", async () => {
     vi.stubEnv("QUERIFY_GEMINI_API_KEY", "server-only-test-key");
+    vi.stubEnv("QUERIFY_GEMINI_MODEL", "");
     vi.stubGlobal("fetch", vi.fn(async () => new Response("quota detail", { status: 429 })));
     await expect(requestGeminiResearch("Any question?"))
       .rejects.toMatchObject({ status: 429, code: "GEMINI_SEARCH_FAILED" });

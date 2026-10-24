@@ -22,30 +22,20 @@ async function postResearch(payload: Record<string, unknown>) {
   return { status: response.statusCode, body: JSON.parse(responseBody) as Record<string, unknown> };
 }
 
-function groundedPayload(sourceUrl = "https://example.com/source") {
+function generateContentPayload(sourceUrl = "https://example.com/source") {
   const answer = "A current, sourced answer.";
   return {
-    steps: [
-      { type: "google_search_call", arguments: { queries: ["recent ocean research"] } },
-      {
-        type: "google_search_result",
-        result: [{ search_suggestions: "<div>Google Search suggestions</div>" }],
-      },
-      {
-        type: "model_output",
-        content: [{
-          type: "text",
-          text: answer,
-          annotations: [{
-            type: "url_citation",
-            url: sourceUrl,
-            title: "Example source",
-            start_index: 0,
-            end_index: answer.length,
-          }],
+    candidates: [{
+      content: { parts: [{ text: answer }] },
+      groundingMetadata: {
+        searchEntryPoint: { renderedContent: "<div>Google Search suggestions</div>" },
+        groundingChunks: [{ web: { uri: sourceUrl, title: "Example source" } }],
+        groundingSupports: [{
+          segment: { startIndex: 0, endIndex: answer.length, text: answer },
+          groundingChunkIndices: [0],
         }],
       },
-    ],
+    }],
   };
 }
 
@@ -66,9 +56,9 @@ describe("Vercel general Web Research endpoint", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it("uses Interactions API Search grounding for any topic and returns citations without persisting the answer", async () => {
+  it("uses Gemini 2.5 GenerateContent Search grounding and returns source citations without persistence", async () => {
     vi.stubEnv("QUERIFY_GEMINI_API_KEY", "server-only-test-key");
-    const fetchMock = vi.fn(async () => new Response(JSON.stringify(groundedPayload()), {
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify(generateContentPayload()), {
       status: 200,
       headers: { "Content-Type": "application/json" },
     }));
@@ -83,20 +73,17 @@ describe("Vercel general Web Research endpoint", () => {
     expect(result.body.searchSuggestionsHtml).toContain("Google Search suggestions");
     expect(result.body.rows).toBeUndefined();
     const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
-    expect(url).toBe("https://generativelanguage.googleapis.com/v1beta/interactions");
+    expect(url).toBe("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent");
     const requestBody = JSON.parse(String(init.body));
-    expect(requestBody.tools).toEqual([{ type: "google_search" }]);
-    expect(requestBody.input).toContain("recent ocean research");
-    expect(requestBody.temperature).toBeUndefined();
+    expect(requestBody.tools).toEqual([{ googleSearchRetrieval: {} }]);
+    expect(requestBody.contents[0].parts[0].text).toContain("recent ocean research");
   });
 
   it("rejects an ungrounded provider answer rather than returning uncited AI prose", async () => {
     vi.stubEnv("QUERIFY_GEMINI_API_KEY", "server-only-test-key");
+    vi.stubEnv("QUERIFY_GEMINI_MODEL", "");
     vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({
-      steps: [{
-        type: "model_output",
-        content: [{ type: "text", text: "No sources.", annotations: [] }],
-      }],
+      candidates: [{ content: { parts: [{ text: "No sources." }] } }],
     }), { status: 200 })));
     const result = await postResearch({ query: "Tell me about current events" });
     expect(result.status).toBe(502);
@@ -129,7 +116,7 @@ describe("Vercel general Web Research endpoint", () => {
 
   it("allows general questions that contain SQL-like words because this route is not a SQL executor", async () => {
     vi.stubEnv("QUERIFY_GEMINI_API_KEY", "server-only-test-key");
-    const fetchMock = vi.fn(async () => new Response(JSON.stringify(groundedPayload()), { status: 200 }));
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify(generateContentPayload()), { status: 200 }));
     vi.stubGlobal("fetch", fetchMock);
     const result = await postResearch({ query: "What does DROP mean in geology?" });
     expect(result.status).toBe(200);

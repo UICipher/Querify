@@ -27,7 +27,7 @@ The local static preview intentionally does not contain a provider key or host t
 
 ## General Web Research: Gemini + Google Search
 
-The Query Console now opens in **Web Research** mode. This is separate from **SQL Demo**: it sends a question about any topic to Gemini's Interactions API with Google's Search grounding tool. The server parses the grounded `model_output` text, URL-citation annotations, and `google_search_result` suggestions, then displays the answer, inline citations, source links, and Google's Search Suggestions widget. It does not query or return rows from the six synthetic SQLite tables. Results are shown only for the current browser view and are not written to Querify's audit history or local storage.
+The Query Console now opens in **Web Research** mode. This is separate from **SQL Demo**: it sends a question about any topic to Gemini with Google's Search grounding tool. It uses GenerateContent and `groundingMetadata` for Gemini 2.5, and the Interactions API's `model_output` text, URL-citation annotations, and `google_search_result` suggestions for Gemini 3 and newer. It displays the answer, inline citations, source links, and Google's Search Suggestions widget. It does not query or return rows from the six synthetic SQLite tables. Results are shown only for the current browser view and are not written to Querify's audit history or local storage.
 
 ### Configure the server-side key
 

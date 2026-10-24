@@ -4,7 +4,7 @@
 
 Querify has two intentionally separate experiences:
 
-1. **Web Research** (the default Query Console mode) accepts questions across topics and languages. Its Vercel endpoint calls Gemini's Interactions API with Google's native Search grounding tool. A successful response must include URL-citation annotations and Google's Search Suggestions content. The UI displays the grounded answer, inline citations, source links, and the Search Suggestions widget. It does not query the demo database or invent placeholder rows. If the key is missing or grounding fails, the interface shows an error instead of demo results.
+1. **Web Research** (the default Query Console mode) accepts questions across topics and languages. Its Vercel endpoint calls Gemini's native Search grounding tool. Gemini 2.5 uses GenerateContent grounding metadata; Gemini 3 and newer use the Interactions API's URL-citation annotations and Search result steps. The UI displays the grounded answer, inline citations, source links, and the Search Suggestions widget. It does not query the demo database or invent placeholder rows. If the key is missing or grounding fails, the interface shows an error instead of demo results.
 2. **SQL Demo** is a separate tab for exploring six illustrative/sample datasets. It uses the existing optional OpenAI-compatible model planner or deterministic local rules, validates the plan, and executes only guarded read-only SQL. Its rows are always labeled synthetic and are not current real-world market data.
 
 ### Data flow
@@ -12,8 +12,8 @@ Querify has two intentionally separate experiences:
 ```text
 Web Research question
   → POST /api/v1/research
-  → Gemini Interactions API + Google Search grounding
-  → response steps (answer, URL-citation annotations, Search Suggestions)
+  → Gemini 2.5 GenerateContent or Gemini 3+ Interactions API + Google Search grounding
+  → verified metadata/steps (answer, citations, Search Suggestions)
   → current-page answer with clickable sources; no persistence and no sample fallback
 
 SQL Demo question
@@ -56,8 +56,8 @@ The static local Vite preview does not host Vercel serverless functions. Use the
 
 Vercel rejects Hobby deployments with more than 12 Serverless Functions ([function-count limit](https://vercel.link/function-count-limit)). Keep only the four route handlers in `api/`; shared modules, declarations, and tests belong under `server/querify-api/`. The UI contract test enforces this layout.
 
-The Interactions API reached Google in production, but Gemini 3.8 returned HTTP 429. Google's current pricing lists Search grounding for Gemini 3 and newer as unavailable on the Free tier. Querify now defaults to the supported `gemini-2.5-flash` model; verify a live sourced answer after this model-default update is deployed.
+The production Gemini 3.8 Interactions request returned HTTP 429, consistent with Google's current Free-tier Search-grounding limitation for Gemini 3 and newer. A Gemini 2.5 Interactions attempt was rejected, so this release routes the default `gemini-2.5-flash` through Google's documented GenerateContent endpoint and parses `groundingMetadata`; Gemini 3+ overrides continue to use Interactions. Verify a live sourced answer after this release is deployed.
 
 ## Publication status
 
-The Vercel project is linked to `UICipher/Querify`, and its Gemini key is configured as a server-side **Production** secret. The Interactions API compatibility fix is live; the 2.5 Flash default is being released from `main`. After that deployment is Ready, ask a general-topic question and verify that the returned answer includes Google Search citations. If access, quota, or model configuration fails, the UI returns a targeted error rather than substituting demo rows.
+The Vercel project is linked to `UICipher/Querify`, and its Gemini key is configured as a server-side **Production** secret. The Interactions API compatibility fix is live; the model-aware GenerateContent/Interactions routing is being released from `main`. After that deployment is Ready, ask a general-topic question and verify that the returned answer includes Google Search citations. If access, quota, or model configuration fails, the UI returns a targeted error rather than substituting demo rows.
