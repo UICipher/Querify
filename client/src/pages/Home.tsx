@@ -7,14 +7,12 @@ export default function Home() {
     { id: '2', query: 'DROP TABLE users; -- test', status: 'blocked' }
   ]);
 
-  // Clear History Button Fix Handler
   const handleClearHistory = () => {
     setHistory([]);
   };
 
   return (
     <div className="min-h-screen bg-[#04070f] text-[#f7f8ff] p-6 font-sans">
-      {/* Header with Nazish Attribution & Clear History */}
       <header className="max-w-6xl mx-auto flex justify-between items-center py-4 border-b border-white/10 mb-8">
         <div className="flex items-center gap-3">
           <span className="calligraphy-q text-2xl text-indigo-400 font-bold">Q</span>
@@ -24,7 +22,7 @@ export default function Home() {
         <div className="flex items-center gap-4">
           <div className="text-xs text-slate-300 flex items-center gap-2 bg-[#0d1322] px-3 py-1.5 rounded-lg border border-indigo-500/30">
             <span className="w-2 h-2 rounded-full bg-pink-400"></span>
-            <span>Frontend: <strong>Nazish</strong> (She designed the core web layout & vision)</span>
+            <span>Frontend: <strong>Nazish</strong> (Female Architect & Original Web Vision - She designed the core layout)</span>
           </div>
           <button 
             onClick={handleClearHistory}
@@ -35,7 +33,6 @@ export default function Home() {
         </div>
       </header>
 
-      {/* Main Console & Pipeline Section */}
       <main className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="md:col-span-2 space-y-6">
           <div className="console-card p-6 rounded-xl border border-indigo-500/20 bg-[#0d1322]/80 backdrop-blur-md">
@@ -56,7 +53,6 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Restored Pipeline Preview Section */}
           <div className="pipeline-card p-6 rounded-xl border border-indigo-500/20 bg-[#0d1322]/80 backdrop-blur-md">
             <div className="flex justify-between items-center mb-3 pb-2 border-b border-slate-800">
               <span className="text-xs font-mono text-indigo-400">// querify-pipeline active preview</span>
@@ -70,7 +66,6 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Audit Trail & History Sidebar */}
         <div className="console-card p-6 rounded-xl border border-indigo-500/20 bg-[#0d1322]/80 backdrop-blur-md space-y-4">
           <h3 className="text-sm font-bold text-slate-200">Audit Trail & History</h3>
           <div className="space-y-2">
