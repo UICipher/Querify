@@ -8,6 +8,7 @@ export type LiveQueryResponse = {
   columns?: string[];
   rows?: Array<Record<string, string | number | null>>;
   businessInsight?: string;
+  dataNotice?: string;
   chartHint?: { chartType?: "table" | "bar" | "line"; title?: string };
   executionTimeMs?: number;
 };

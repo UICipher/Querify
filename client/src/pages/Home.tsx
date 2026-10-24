@@ -1,5 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
-import { detectUnsupportedDemoScope } from "@shared/queryScope";
+import { useEffect, useMemo, useState, type PointerEvent as ReactPointerEvent } from "react";
+import {
+  detectUnsupportedDemoScope,
+  getSupportedDemoDomains,
+} from "@shared/queryScope";
 import {
   executeLiveQuery,
   queryApiUrl,
@@ -67,7 +70,12 @@ type Result = {
   chartField: string;
   title: string;
   duration: number;
+  dataNotice?: string;
 } & AnalyticsContract;
+type ServerClarification = {
+  question: string;
+  options: Array<{ id: string; label: string; value: string }>;
+};
 type AuditEntry = {
   status: "SUCCESS" | "SECURITY_BLOCKED";
   question: string;
@@ -117,171 +125,21 @@ const team: TeamMember[] = [
 ];
 
 const schemaTables = [
-  {
-    name: "companies",
-    rows: 15,
-    description:
-      "Stores AI enterprises, frontier research labs, and technology corporations.",
-    columns: [
-      ["company_id", "INT"],
-      ["company_name", "VARCHAR(100)"],
-      ["industry", "VARCHAR(100)"],
-      ["country", "VARCHAR(50)"],
-      ["founded_year", "INT"],
-      ["company_type", "VARCHAR(50)"],
-      ["headquarters_city", "VARCHAR(100)"],
-    ],
-  },
-  {
-    name: "ai_models",
-    rows: 16,
-    description:
-      "Catalog of prominent artificial intelligence models and benchmark evaluations.",
-    columns: [
-      ["model_id", "INT"],
-      ["company_id", "INT"],
-      ["company_name", "VARCHAR(100)"],
-      ["model_name", "VARCHAR(100)"],
-      ["model_category", "VARCHAR(50)"],
-      ["release_year", "INT"],
-      ["parameter_count_billions", "DECIMAL(10,2)"],
-      ["performance_score", "DECIMAL(5,2)"],
-    ],
-  },
-  {
-    name: "financial_performance",
-    rows: 18,
-    description:
-      "Annual balance sheet, top-line revenue, and net profit records (Millions USD).",
-    columns: [
-      ["performance_id", "INT"],
-      ["company_id", "INT"],
-      ["company_name", "VARCHAR(100)"],
-      ["fiscal_year", "INT"],
-      ["revenue_millions", "DECIMAL(12,2)"],
-      ["profit_millions", "DECIMAL(12,2)"],
-      ["operating_cost_millions", "DECIMAL(12,2)"],
-      ["revenue_growth_percent", "DECIMAL(6,2)"],
-    ],
-  },
-  {
-    name: "ai_investments",
-    rows: 15,
-    description:
-      "Capital investments allocated to AI compute clusters, research, and chips.",
-    columns: [
-      ["investment_id", "INT"],
-      ["company_id", "INT"],
-      ["company_name", "VARCHAR(100)"],
-      ["investment_year", "INT"],
-      ["investment_amount_millions", "DECIMAL(12,2)"],
-      ["investment_category", "VARCHAR(100)"],
-      ["estimated_return_percent", "DECIMAL(6,2)"],
-    ],
-  },
-  {
-    name: "research_projects",
-    rows: 12,
-    description:
-      "Specialized frontier R&D initiatives, robotics, and scientific explorations.",
-    columns: [
-      ["project_id", "INT"],
-      ["company_id", "INT"],
-      ["company_name", "VARCHAR(100)"],
-      ["project_name", "VARCHAR(150)"],
-      ["research_area", "VARCHAR(100)"],
-      ["budget_millions", "DECIMAL(10,2)"],
-      ["project_status", "VARCHAR(50)"],
-      ["start_date", "DATE"],
-    ],
-  },
-  {
-    name: "market_performance",
-    rows: 15,
-    description:
-      "Market dominance, adoption velocity, and composite health indexes.",
-    columns: [
-      ["market_id", "INT"],
-      ["company_id", "INT"],
-      ["company_name", "VARCHAR(100)"],
-      ["fiscal_year", "INT"],
-      ["market_share_percent", "DECIMAL(5,2)"],
-      ["customer_growth_percent", "DECIMAL(6,2)"],
-      ["performance_index", "DECIMAL(5,2)"],
-    ],
-  },
+  { name: "companies", rows: 8, description: "Illustrative company financial and AI-investment metrics.", columns: [["id", "TEXT"], ["company_name", "TEXT"], ["sector", "TEXT"], ["headquarters", "TEXT"], ["profit_millions", "REAL"], ["revenue_millions", "REAL"], ["revenue_growth_percent", "REAL"], ["estimated_return_percent", "REAL"], ["fiscal_year", "INTEGER"]] },
+  { name: "restaurants", rows: 8, description: "Fictional restaurant records with cuisine, ratings, prices, and illustrative revenue.", columns: [["id", "TEXT"], ["name", "TEXT"], ["cuisine", "TEXT"], ["city", "TEXT"], ["rating", "REAL"], ["price_level", "INTEGER"], ["average_meal_price_usd", "REAL"], ["annual_revenue_usd", "REAL"], ["review_count", "INTEGER"]] },
+  { name: "hotels", rows: 6, description: "Fictional hotel records with sample nightly rates, occupancy, and ratings.", columns: [["id", "TEXT"], ["name", "TEXT"], ["city", "TEXT"], ["region", "TEXT"], ["star_rating", "REAL"], ["nightly_rate_usd", "REAL"], ["occupancy_percent", "REAL"], ["review_count", "INTEGER"]] },
+  { name: "homes", rows: 8, description: "Fictional property records; not current listings or market valuations.", columns: [["id", "TEXT"], ["city", "TEXT"], ["neighborhood", "TEXT"], ["bedrooms", "INTEGER"], ["bathrooms", "REAL"], ["square_feet", "INTEGER"], ["listing_price_usd", "REAL"], ["property_type", "TEXT"], ["year_built", "INTEGER"]] },
+  { name: "cars", rows: 8, description: "Fictional vehicle records with price, body style, efficiency, range, and horsepower.", columns: [["id", "TEXT"], ["make", "TEXT"], ["model", "TEXT"], ["year", "INTEGER"], ["price_usd", "REAL"], ["body_style", "TEXT"], ["mpg", "REAL"], ["range_miles", "REAL"], ["horsepower", "INTEGER"]] },
+  { name: "phones", rows: 8, description: "Fictional smartphone records with release year, price, storage, camera, and battery.", columns: [["id", "TEXT"], ["brand", "TEXT"], ["model", "TEXT"], ["release_year", "INTEGER"], ["price_usd", "REAL"], ["storage_gb", "INTEGER"], ["camera_mp", "REAL"], ["battery_mah", "INTEGER"], ["screen_inches", "REAL"]] },
 ];
 
 const sampleRowsByTable: Record<string, ResultRow[]> = {
-  companies: [
-    {
-      company_id: 1,
-      company_name: "NVIDIA",
-      industry: "AI hardware",
-      country: "United States",
-      founded_year: 1993,
-      company_type: "Public company",
-      headquarters_city: "Santa Clara",
-    },
-  ],
-  ai_models: [
-    {
-      model_id: 1,
-      company_id: 1,
-      company_name: "NVIDIA",
-      model_name: "Demo Vision Model",
-      model_category: "Multimodal",
-      release_year: 2024,
-      parameter_count_billions: 70,
-      performance_score: 91.5,
-    },
-  ],
-  financial_performance: [
-    {
-      performance_id: 1,
-      company_id: 1,
-      company_name: "NVIDIA",
-      fiscal_year: 2024,
-      revenue_millions: 122000,
-      profit_millions: 68000,
-      operating_cost_millions: 54000,
-      revenue_growth_percent: 100.3,
-    },
-  ],
-  ai_investments: [
-    {
-      investment_id: 1,
-      company_id: 1,
-      company_name: "NVIDIA",
-      investment_year: 2024,
-      investment_amount_millions: 12000,
-      investment_category: "Compute infrastructure",
-      estimated_return_percent: demoCompanies[0].estimated_return_percent,
-    },
-  ],
-  research_projects: [
-    {
-      project_id: 1,
-      company_id: 1,
-      company_name: "NVIDIA",
-      project_name: "Illustrative robotics research",
-      research_area: "Robotics",
-      budget_millions: 250,
-      project_status: "Active",
-      start_date: "2024-01-15",
-    },
-  ],
-  market_performance: [
-    {
-      market_id: 1,
-      company_id: 1,
-      company_name: "NVIDIA",
-      fiscal_year: 2024,
-      market_share_percent: 22.5,
-      customer_growth_percent: 31.2,
-      performance_index: 88.4,
-    },
-  ],
+  companies: [{ id: "co-01", company_name: "NVIDIA", sector: "AI hardware", headquarters: "Santa Clara", profit_millions: 68000, revenue_millions: 122000, revenue_growth_percent: 100.3, estimated_return_percent: 18.4, fiscal_year: 2024 }],
+  restaurants: [{ id: "r-01", name: "Harbor & Herb", cuisine: "Mediterranean", city: "Seattle", rating: 4.8, price_level: 3, average_meal_price_usd: 32, annual_revenue_usd: 1850000, review_count: 1200 }],
+  hotels: [{ id: "h-01", name: "Northline House", city: "New York", region: "Midtown", star_rating: 4.6, nightly_rate_usd: 289, occupancy_percent: 82, review_count: 940 }],
+  homes: [{ id: "home-01", city: "Seattle", neighborhood: "Cedar Ridge", bedrooms: 3, bathrooms: 2, square_feet: 1850, listing_price_usd: 685000, property_type: "Townhouse", year_built: 2018 }],
+  cars: [{ id: "car-01", make: "Aster", model: "Eon", year: 2025, price_usd: 41900, body_style: "Electric sedan", mpg: 122, range_miles: 340, horsepower: 300 }],
+  phones: [{ id: "phone-01", brand: "Aster Mobile", model: "Nova Pro", release_year: 2025, price_usd: 999, storage_gb: 256, camera_mp: 50, battery_mah: 4800, screen_inches: 6.4 }],
 };
 
 const ambiguousOptions = [
@@ -418,6 +276,26 @@ export default function Home() {
   const [activePipelineStep, setActivePipelineStep] = useState(0);
   const [pipelinePaused, setPipelinePaused] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(false);
+  const [serverClarification, setServerClarification] =
+    useState<ServerClarification | null>(null);
+  const [clarificationDraft, setClarificationDraft] = useState("");
+
+  const handleCursorSpotlight = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (
+      reducedMotion ||
+      event.pointerType === "touch" ||
+      !window.matchMedia("(hover: hover)").matches
+    )
+      return;
+    const target =
+      event.target instanceof Element
+        ? event.target.closest<HTMLElement>("[data-cursor-spotlight]")
+        : null;
+    if (!target) return;
+    const bounds = target.getBoundingClientRect();
+    target.style.setProperty("--spot-x", `${event.clientX - bounds.left}px`);
+    target.style.setProperty("--spot-y", `${event.clientY - bounds.top}px`);
+  };
 
   useEffect(() => {
     if (typeof window === "undefined" || !window.matchMedia) return;
@@ -453,10 +331,15 @@ export default function Home() {
     const limit = /\b(?:5|five)\b/i.test(question) ? 5 : 10;
     const next = createDemoResult(metric, { period, limit });
     setSelectedMetric(metric);
-    setResult(next);
+    setResult({
+      ...next,
+      dataNotice:
+        "Local preview uses illustrative company fixtures. Deployed multi-domain queries use the server-side AI API.",
+    });
     setResultSearch("");
     setResultTab("sql");
     setClarifying(false);
+    setServerClarification(null);
     setConversationId("");
     setHistory(entries => [
       {
@@ -501,12 +384,17 @@ export default function Home() {
       businessInsight:
         response.businessInsight ??
         "The live query returned a verified result set.",
+      dataNotice:
+        response.dataNotice ??
+        "Illustrative synthetic sample data only — not live listings or market data.",
       chartHint: { chartType, title },
     };
     setResult(next);
     setResultSearch("");
     setResultTab("sql");
     setClarifying(false);
+    setServerClarification(null);
+    setClarificationDraft("");
     setConversationId("");
     setApiError("");
     setHistory(entries => [
@@ -527,6 +415,11 @@ export default function Home() {
   ) => {
     if (response.status === "clarification_needed") {
       setConversationId(response.conversationId ?? "");
+      setServerClarification({
+        question: response.question ?? "Which detail should Querify use?",
+        options: response.options ?? [],
+      });
+      setClarificationDraft("");
       setClarificationMode(
         (response.question ?? "").toLowerCase().includes("window")
           ? "period"
@@ -539,14 +432,19 @@ export default function Home() {
     }
     showLiveResult(response, question);
   };
-  const submitQuery = async () => {
-    const text = query.trim().toLowerCase();
+  const submitQuery = async (queryText = query) => {
+    const submittedQuery = queryText.trim();
+    const text = submittedQuery.toLowerCase();
     if (!text) {
       notify("Type an analytical question first.");
       return;
     }
     setApiError("");
-    if (/;|--|\b(drop|delete|update|insert|alter|truncate)\b/i.test(query)) {
+    setServerClarification(null);
+    setClarificationDraft("");
+    setClarifying(false);
+    setConversationId("");
+    if (/;|--|\b(drop|delete|update|insert|alter|truncate)\b/i.test(submittedQuery)) {
       const message =
         "Query blocked (HTTP 422): only one read-only SELECT statement is permitted. Remove mutations, comments, semicolons, or stacked statements.";
       setApiError(message);
@@ -555,8 +453,8 @@ export default function Home() {
       setHistory(entries => [
         {
           status: "SECURITY_BLOCKED",
-          question: query,
-          sql: query,
+          question: submittedQuery,
+          sql: submittedQuery,
           duration: 0,
           rows: 0,
           time: new Date().toLocaleString(),
@@ -566,7 +464,7 @@ export default function Home() {
       ]);
       return;
     }
-    const scopeIssue = detectUnsupportedDemoScope(query);
+    const scopeIssue = detectUnsupportedDemoScope(submittedQuery);
     if (scopeIssue) {
       setApiError(scopeIssue.message);
       setClarifying(false);
@@ -579,11 +477,11 @@ export default function Home() {
       try {
         handleLiveResponse(
           await executeLiveQuery({
-            query,
+            query: submittedQuery,
             conversationId: conversationId || undefined,
             execute: true,
           }),
-          query
+          submittedQuery
         );
       } catch (error) {
         const apiError = error as Error & { status?: number; code?: string };
@@ -598,8 +496,8 @@ export default function Home() {
           setHistory(entries => [
             {
               status: "SECURITY_BLOCKED",
-              question: query,
-              sql: query,
+              question: submittedQuery,
+              sql: submittedQuery,
               duration: 0,
               rows: 0,
               time: new Date().toLocaleString(),
@@ -607,13 +505,36 @@ export default function Home() {
             },
             ...entries,
           ]);
-        } else
+        } else {
+          setResult(null);
+          setClarifying(false);
           setApiError(
-            `Live query service unavailable: ${(error as Error).message}. Demo mode remains available.`
+            apiError.code === "AI_NOT_CONFIGURED"
+              ? apiError.message
+              : `Live AI query failed: ${apiError.message}. No fixture fallback was used.`
           );
+        }
       } finally {
         setIsExecuting(false);
       }
+      return;
+    }
+    const localDomains = getSupportedDemoDomains(submittedQuery);
+    if (localDomains.length > 1) {
+      setResult(null);
+      setClarifying(false);
+      setApiError(
+        "This local preview can run only its company fixture. Choose one sample domain at a time and use the deployed AI API for restaurants, hotels, homes, cars, or phones. No rows were returned."
+      );
+      return;
+    }
+    const localDomain = localDomains[0] ?? null;
+    if (localDomain && localDomain !== "companies") {
+      setResult(null);
+      setClarifying(false);
+      setApiError(
+        `The ${localDomain} sample table is available through the deployed server-side AI API. This local preview does not substitute company rows for it; configure the Vercel model settings to run the query.`
+      );
       return;
     }
     if (text.includes("revenue report")) {
@@ -630,7 +551,7 @@ export default function Home() {
       setClarifying(true);
       return;
     }
-    showResult(inferDemoMetric(text), query);
+    showResult(inferDemoMetric(text), submittedQuery);
   };
   const submitClarification = async (
     answer: string,
@@ -1090,15 +1011,15 @@ export default function Home() {
           <span>› NATURAL LANGUAGE CONSOLE</span>
           <h2>Translate intent into a verified query.</h2>
           <p>
-            Ask naturally. If intent is ambiguous, Querify pauses execution and
-            makes the business rule explicit.
+            A server-side AI model maps your question to guarded SQL and runs it
+            only against the synthetic sample tables.
           </p>
         </div>
         <div className="guard-pill">
-          <ShieldCheck size={14} /> AST Guard Active
+          <ShieldCheck size={14} /> Read-only SQL Guard
         </div>
       </div>
-      <div className="console-card">
+      <div className="console-card" data-cursor-spotlight>
         <div className="input-row">
           <input
             value={query}
@@ -1107,6 +1028,8 @@ export default function Home() {
               if (next.trim() !== query.trim()) {
                 setClarifying(false);
                 setConversationId("");
+                setServerClarification(null);
+                setClarificationDraft("");
                 setLastClarificationAnswer("");
                 setResult(null);
                 setApiError("");
@@ -1115,12 +1038,12 @@ export default function Home() {
             }}
             onKeyDown={e => e.key === "Enter" && submitQuery()}
             className="focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500 transition-all duration-200"
-            placeholder="e.g. Which AI companies have the highest revenue in 2024?"
+            placeholder="e.g. Show restaurants in Seattle rated above 4.5"
           />
           <button
             disabled={isExecuting}
             className="query-button interactive-btn transition-all duration-200 ease-out hover:scale-[1.01] hover:-translate-y-0.5 hover:shadow-lg hover:shadow-cyan-500/10 active:scale-[0.98] cursor-pointer"
-            onClick={submitQuery}
+            onClick={() => void submitQuery()}
           >
             {isExecuting ? "Running…" : "Query ↵"}
           </button>
@@ -1167,10 +1090,7 @@ export default function Home() {
                     setResult(null);
                     setLastClarificationAnswer("");
                     setApiError("");
-                    setClarificationMode(
-                      sample.includes("revenue report") ? "period" : "metric"
-                    );
-                    setClarifying(true);
+                    void submitQuery(sample);
                   }}
                 >
                   {sample} <small>AMBIGUOUS</small>
@@ -1190,10 +1110,7 @@ export default function Home() {
                   key={sample}
                   onClick={() => {
                     setQuery(sample);
-                    showResult(
-                      sample.includes("profitable") ? "profit" : "revenue",
-                      sample
-                    );
+                    void submitQuery(sample);
                   }}
                 >
                   {sample}
@@ -1201,10 +1118,42 @@ export default function Home() {
               ))}
             </div>
           </div>
+          <div>
+            <span className="group-label">✦ One-tap AI sample domains:</span>
+            <div
+              className="chip-row domain-prompt-row"
+              aria-label="Sample questions for each supported domain"
+            >
+              {[
+                { domain: "Restaurants", sample: "Show restaurants in Seattle rated above 4.5" },
+                { domain: "Hotels", sample: "Compare average hotel nightly rates by city" },
+                { domain: "Homes", sample: "Find three-bedroom homes under $600,000" },
+                { domain: "Cars", sample: "Rank cars by estimated range in miles" },
+                { domain: "Phones", sample: "Show phones with the highest camera resolution" },
+                { domain: "Companies", sample: "Rank companies by revenue growth" },
+              ].map(({ domain, sample }) => (
+                <button
+                  className="prompt-chip domain-prompt clarification-pill"
+                  data-cursor-spotlight
+                  key={domain}
+                  onClick={() => {
+                    setQuery(sample);
+                    setResult(null);
+                    setLastClarificationAnswer("");
+                    setApiError("");
+                    void submitQuery(sample);
+                  }}
+                >
+                  <span className="domain-prompt-label">{domain}</span>
+                  <span>{sample}</span>
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
       <aside className="studio-sidebar">
-        <div className="studio-card">
+        <div className="studio-card" data-cursor-spotlight>
           <h3>
             <Sparkles size={15} /> Model Fine-Tuning Studio
           </h3>
@@ -1230,7 +1179,7 @@ export default function Home() {
             Launch schema job <ArrowRight size={13} />
           </button>
         </div>
-        <div className="studio-card guardrail-card">
+        <div className="studio-card guardrail-card" data-cursor-spotlight>
           <h3>
             <ShieldCheck size={15} /> SqlSecurityGuard
           </h3>
@@ -1247,11 +1196,11 @@ export default function Home() {
             execution are blocked before the database boundary.
           </p>
         </div>
-        <div className="studio-card source-card">
+        <div className="studio-card source-card" data-cursor-spotlight>
           <h3>
             <Database size={15} /> Workspace source
           </h3>
-          <p>Schema catalog synced · 6 tables · H2 fallback available</p>
+          <p>6 seeded sample tables · read-only SQLite execution</p>
           <button className="text-button" onClick={() => go("explorer")}>
             Inspect schema <ArrowRight size={12} />
           </button>
@@ -1265,33 +1214,64 @@ export default function Home() {
                 AMBIGUITY DETECTED · DISAMBIGUATION REQUIRED
               </span>
               <h3>
-                {clarificationMode === "period"
-                  ? "Which reporting window should we use?"
-                  : "What metric would you like to use to evaluate company performance?"}
+                {serverClarification?.question ??
+                  (clarificationMode === "period"
+                    ? "Which reporting window should we use?"
+                    : "What metric would you like to use to evaluate company performance?")}
               </h3>
             </div>
             <button
               className="icon-button"
-              onClick={() => setClarifying(false)}
+              onClick={() => {
+                setClarifying(false);
+                setServerClarification(null);
+                setConversationId("");
+              }}
+              aria-label="Close clarification"
             >
               <X size={16} />
             </button>
           </div>
           <div className="clarification-copy">
-            {clarificationMode === "period" ? (
-              <>
-                “Revenue report” needs a time window before Querify can produce
-                a defensible comparison.
-              </>
+            {serverClarification ? (
+              <>Choose an option or enter a short answer so the model can refine the safe sample query.</>
+            ) : clarificationMode === "period" ? (
+              <>“Revenue report” needs a time window before Querify can produce a defensible comparison.</>
             ) : (
-              <>
-                The term <b>“best performing”</b> can refer to top-line gross
-                revenue, net profitability, year-over-year revenue growth, or AI
-                investment return.
-              </>
+              <>The term <b>“best performing”</b> can refer to top-line gross revenue, net profitability, year-over-year revenue growth, or AI investment return.</>
             )}
           </div>
-          {clarificationMode === "metric" && (
+          {serverClarification ? (
+            <div className="metric-options">
+              {serverClarification.options.map((option, index) => (
+                <button
+                  className="metric-option clarification-pill transition-transform duration-200 active:scale-95 cursor-pointer"
+                  key={option.id}
+                  onClick={() =>
+                    void submitClarification(
+                      option.value,
+                      option.value,
+                      `${query} · ${option.label}`
+                    )
+                  }
+                >
+                  <span className="metric-index">{index + 1}</span>
+                  <span><strong>{option.label}</strong></span>
+                  <ArrowRight size={15} />
+                </button>
+              ))}
+              {!serverClarification.options.length && (
+                <label className="server-clarification-input">
+                  Your answer
+                  <input
+                    value={clarificationDraft}
+                    onChange={event => setClarificationDraft(event.target.value)}
+                    aria-label="Your clarification answer"
+                  />
+                </label>
+              )}
+            </div>
+          ) : clarificationMode === "metric" ? (
             <div className="metric-options">
               {ambiguousOptions.map((option, index) => (
                 <button
@@ -1300,16 +1280,12 @@ export default function Home() {
                   onClick={() => chooseMetric(option.value)}
                 >
                   <span className="metric-index">{index + 1}</span>
-                  <span>
-                    <strong>{option.label}</strong>
-                    <small>{option.detail}</small>
-                  </span>
+                  <span><strong>{option.label}</strong><small>{option.detail}</small></span>
                   <Check size={15} />
                 </button>
               ))}
             </div>
-          )}
-          {clarificationMode === "period" && (
+          ) : (
             <div className="metric-options period-options">
               {(queryApiUrl()
                 ? periodOptions
@@ -1321,10 +1297,7 @@ export default function Home() {
                   onClick={() => choosePeriod(option.value)}
                 >
                   <span className="metric-index">{index + 1}</span>
-                  <span>
-                    <strong>{option.label}</strong>
-                    <small>{option.detail}</small>
-                  </span>
+                  <span><strong>{option.label}</strong><small>{option.detail}</small></span>
                   <ArrowRight size={15} />
                 </button>
               ))}
@@ -1332,24 +1305,36 @@ export default function Home() {
           )}
           <div className="modal-footer">
             <span>
-              Use ↑ ↓ to select <b>·</b> Enter to confirm
+              {serverClarification ? "Choose an option or enter a short answer" : <>Use ↑ ↓ to select <b>·</b> Enter to confirm</>}
             </span>
             <div>
               <button
                 className="text-button"
-                onClick={() => setClarifying(false)}
+                onClick={() => {
+                  setClarifying(false);
+                  setServerClarification(null);
+                  setConversationId("");
+                }}
               >
                 Dismiss
               </button>
               <button
                 className="primary-button small interactive-btn transition-all duration-200 ease-out hover:scale-[1.01] hover:-translate-y-0.5 hover:shadow-lg hover:shadow-cyan-500/10 active:scale-[0.98] cursor-pointer"
-                onClick={() =>
-                  clarificationMode === "period"
-                    ? choosePeriod("all_time")
-                    : showResult(selectedMetric)
-                }
+                onClick={() => {
+                  if (serverClarification) {
+                    const firstOption = serverClarification.options[0];
+                    const answer = firstOption?.value || clarificationDraft.trim();
+                    if (answer)
+                      void submitClarification(answer, answer, `${query} · ${answer}`);
+                    else notify("Select an option or enter a short answer first.");
+                  } else if (clarificationMode === "period") {
+                    choosePeriod("all_time");
+                  } else {
+                    showResult(selectedMetric);
+                  }
+                }}
               >
-                Generate Verified SQL <ArrowRight size={14} />
+                {serverClarification ? "Continue with this answer" : "Generate Verified SQL"} <ArrowRight size={14} />
               </button>
             </div>
           </div>
@@ -1358,7 +1343,7 @@ export default function Home() {
       {result ? (
         ResultPanel()
       ) : (
-        <div className="ready-card">
+        <div className="ready-card" data-cursor-spotlight>
           <div className="ready-icon">
             <Database size={22} />
           </div>
@@ -1377,7 +1362,7 @@ export default function Home() {
     if (!result) return null;
     const current = result;
     return (
-      <div className="result-panel">
+      <div className="result-panel" data-cursor-spotlight>
         <div className="result-top">
           <span>› SYNTHESIZED SQL</span>
           <div>
@@ -1402,6 +1387,11 @@ export default function Home() {
         <div className="logic-line">
           <b>Logic:</b> {current.logic}
         </div>
+        {current.dataNotice && (
+          <div className="data-provenance" role="note">
+            <ShieldCheck size={14} /> {current.dataNotice}
+          </div>
+        )}
         <div className="result-tabs">
           <button
             className={resultTab === "sql" ? "active" : ""}
@@ -1421,12 +1411,12 @@ export default function Home() {
           >
             Chart Projection
           </button>
-          <span>Query returned {current.rows.length} verified records</span>
+          <span>Query returned {current.rows.length} sample rows</span>
         </div>
         {resultTab === "sql" && (
           <div className="sql-note">
-            <Clipboard size={16} /> AST validation passed. Only one read-only
-            SELECT statement reached the execution boundary.
+            <Clipboard size={16} /> Allowlist validation passed. One parameterized,
+            read-only SELECT reached the SQLite sample executor.
           </div>
         )}
         {resultTab === "table" && (
@@ -1610,8 +1600,7 @@ export default function Home() {
             <span>▣ DOMAIN DATABASE CATALOG</span>
             <h2>Inspect the schema behind the answers.</h2>
             <p>
-              Inspect the 6 relational domain tables, primary/foreign keys, and
-              data fixtures.
+              Inspect six seeded sample tables and their synthetic preview values.
             </p>
           </div>
           <div className="view-switch" role="group" aria-label="Explorer view">
@@ -1631,7 +1620,7 @@ export default function Home() {
               aria-label="Refresh demo schema"
               onClick={() =>
                 notify(
-                  "Demo schema is static; connect a data source to refresh it."
+                  "The sample schema is fixed for this demo and uses illustrative records."
                 )
               }
             >
@@ -1694,11 +1683,10 @@ export default function Home() {
           <div className="sample-rows-panel">
             <div className="sample-rows-heading">
               <div>
-                <span>ILLUSTRATIVE DEMO FIXTURES</span>
+                <span>ILLUSTRATIVE SAMPLE PREVIEW</span>
                 <h3>{activeTable.name}</h3>
                 <p>
-                  Sample values are illustrative UI fixtures, not production
-                  records.
+                  Representative synthetic values. Query results run against the server-side SQLite sample table.
                 </p>
               </div>
               <label>
@@ -1718,9 +1706,9 @@ export default function Home() {
             <div className="table-card">
               <div className="table-toolbar">
                 <span>
-                  Sample rows{" "}
+                  Preview rows{" "}
                   <b>
-                    {filteredSamples.length} of {sampleRows.length} rows
+                    {filteredSamples.length} of {sampleRows.length} preview rows
                   </b>
                 </span>
               </div>
@@ -1970,7 +1958,7 @@ export default function Home() {
   );
 
   return (
-    <div className="app-shell">
+    <div className="app-shell" onPointerMove={handleCursorSpotlight}>
       <Header />
       <main>
         {view === "overview"

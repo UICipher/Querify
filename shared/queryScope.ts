@@ -11,30 +11,6 @@ type DomainRule = {
 
 const unsupportedDomains: DomainRule[] = [
   {
-    domain: "restaurant and food-service",
-    pattern:
-      /\b(?:restaurants?|caf[eé]s?|cafeterias?|diners?|dining|food\s+(?:chains?|services?))\b/i,
-  },
-  {
-    domain: "hotel and lodging",
-    pattern: /\b(?:hotels?|motels?|resorts?|lodging|airbnbs?)\b/i,
-  },
-  {
-    domain: "housing and real estate",
-    pattern:
-      /\b(?:houses?|homes?|dwellings?|apartments?|condos?|properties?|property|real\s+estate|rentals?|home\s+listings?)\b/i,
-  },
-  {
-    domain: "phone and mobile-device",
-    pattern:
-      /\b(?:phones?|smartphones?|mobile\s+phones?|cell\s+phones?|handsets?|tablets?|mobile\s+devices?)\b/i,
-  },
-  {
-    domain: "automotive and vehicle",
-    pattern:
-      /\b(?:cars?|automobiles?|vehicles?|trucks?|motorcycles?|bicycles?|bikes?)\b/i,
-  },
-  {
     domain: "healthcare",
     pattern:
       /\b(?:hospitals?|clinics?|patients?|pharmacies?|healthcare|medical\s+records?)\b/i,
@@ -84,6 +60,22 @@ const unsupportedDomains: DomainRule[] = [
   },
 ];
 
+export type SupportedDemoDomain =
+  | "companies"
+  | "restaurants"
+  | "hotels"
+  | "homes"
+  | "cars"
+  | "phones";
+
+const supportedDomainRules: Array<{ domain: SupportedDemoDomain; pattern: RegExp }> = [
+  { domain: "restaurants", pattern: /\b(?:restaurants?|caf[eé]s?|cafeterias?|diners?|dining|food\s+(?:chains?|services?))\b/i },
+  { domain: "hotels", pattern: /\b(?:hotels?|motels?|resorts?|lodging|airbnbs?)\b/i },
+  { domain: "homes", pattern: /\b(?:houses?|homes?|dwellings?|apartments?|condos?|properties?|property|real\s+estate|rentals?|home\s+listings?)\b/i },
+  { domain: "cars", pattern: /\b(?:cars?|automobiles?|vehicles?|trucks?|motorcycles?)\b/i },
+  { domain: "phones", pattern: /\b(?:phones?|smartphones?|mobile\s+phones?|cell\s+phones?|handsets?)\b/i },
+];
+
 const supportedCompanyContext =
   /\b(?:companies?|business(?:es)?|firms?|corporations?|enterprises?|organizations?|ai\s+(?:companies|firms|startups?))\b/i;
 
@@ -102,11 +94,18 @@ const ignoredTargetWords = new Set([
   "average",
   "best",
   "by",
+  "camera",
+  "city",
+  "cities",
   "company",
   "companies",
+  "cuisine",
+  "cuisines",
   "count",
   "data",
   "details",
+  "bedrooms",
+  "bathrooms",
   "each",
   "every",
   "fiscal",
@@ -126,6 +125,18 @@ const ignoredTargetWords = new Set([
   "lowest",
   "me",
   "metric",
+  "model",
+  "models",
+  "brand",
+  "brands",
+  "battery",
+  "storage",
+  "screen",
+  "rooms",
+  "rates",
+  "nightly",
+  "meals",
+  "values",
   "metrics",
   "most",
   "monthly",
@@ -140,6 +151,13 @@ const ignoredTargetWords = new Set([
   "query",
   "records",
   "report",
+  "rating",
+  "ratings",
+  "price",
+  "prices",
+  "range",
+  "region",
+  "reviews",
   "reports",
   "return",
   "revenue",
@@ -147,6 +165,7 @@ const ignoredTargetWords = new Set([
   "sales",
   "show",
   "summary",
+  "their",
   "the",
   "top",
   "2023",
@@ -172,7 +191,7 @@ function requestedUnknownDomain(query: string): string | null {
       if (!candidate || ignoredTargetWords.has(candidate)) continue;
       if (
         /^(?:q[1-4]|\d{4}|\d+)$/i.test(candidate) ||
-        supportedCompanyContext.test(candidate)
+        getSupportedDemoDomains(candidate).length > 0
       ) {
         continue;
       }
@@ -186,24 +205,39 @@ function createScopeIssue(domain: string): UnsupportedDemoScope {
   return {
     code: "UNSUPPORTED_DEMO_SCOPE",
     domain,
-    message: `Demo Mode does not contain ${domain} data. Its sample dataset only has illustrative company financial and AI-investment fixtures, so no company rows were returned. Ask about a supported company or connect a matching data source.`,
+    message: `Demo Mode does not contain a matching ${domain} sample dataset. No unrelated company rows were returned. Supported sample domains are companies, restaurants, hotels, homes, cars, and phones.`,
   };
+}
+
+export function getSupportedDemoDomains(query: string): SupportedDemoDomain[] {
+  const domains: SupportedDemoDomain[] = [];
+  if (supportedCompanyContext.test(query) || supportedFixtureEntities.test(query))
+    domains.push("companies");
+  for (const { domain, pattern } of supportedDomainRules) {
+    if (pattern.test(query)) domains.push(domain);
+  }
+  return domains;
+}
+
+export function getSupportedDemoDomain(query: string): SupportedDemoDomain | null {
+  return getSupportedDemoDomains(query)[0] ?? null;
 }
 
 export function detectUnsupportedDemoScope(
   query: string
 ): UnsupportedDemoScope | null {
+  const supportedDomains = getSupportedDemoDomains(query);
   const knownUnsupported = unsupportedDomains.find(({ pattern }) =>
     pattern.test(query)
   );
-  if (knownUnsupported) return createScopeIssue(knownUnsupported.domain);
-
   if (
-    supportedCompanyContext.test(query) ||
-    supportedFixtureEntities.test(query)
+    knownUnsupported &&
+    !(knownUnsupported.domain === "geography and location" && supportedDomains.length > 0)
   ) {
-    return null;
+    return createScopeIssue(knownUnsupported.domain);
   }
+
+  if (supportedDomains.length > 0) return null;
 
   const unknownDomain = requestedUnknownDomain(query);
   return unknownDomain ? createScopeIssue(unknownDomain) : null;

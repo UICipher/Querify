@@ -454,3 +454,102 @@ textarea:focus-visible,
   background: linear-gradient(135deg, #1e56d4, #3978ef 56%, #16a6c9) !important;
   box-shadow: 0 12px 32px #286fed70 !important;
 }
+
+
+/* Server-backed sample-domain prompts and provenance */
+.domain-prompt-row {
+  align-items: stretch;
+  gap: 9px;
+}
+.domain-prompt {
+  display: grid !important;
+  min-width: 190px;
+  max-width: 290px;
+  gap: 6px;
+  white-space: normal !important;
+  text-align: left;
+  line-height: 1.45;
+  border-color: #2e4d76 !important;
+  color: #d9e7fa !important;
+  background: linear-gradient(145deg, #10213c, #0b192e) !important;
+}
+.domain-prompt-label {
+  color: #83b3ff;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.data-provenance {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 12px 0 16px;
+  padding: 10px 12px;
+  border: 1px solid #294d79;
+  border-radius: 9px;
+  color: #b9d5fb;
+  background: #0c2240;
+  font-size: 11px;
+  line-height: 1.5;
+}
+.data-provenance svg {
+  flex: 0 0 auto;
+  margin-top: 1px;
+  color: #70a9ff;
+}
+.server-clarification-input {
+  display: grid;
+  gap: 7px;
+  padding: 12px;
+  color: var(--q-muted);
+  font-size: 12px;
+}
+.server-clarification-input input {
+  width: min(100%, 420px);
+  padding: 10px 12px;
+  border: 1px solid var(--q-border-strong);
+  border-radius: 8px;
+  color: var(--q-text);
+  background: #08162a;
+}
+
+/* Low-intensity cobalt glow follows the pointer only on marked surfaces. */
+[data-cursor-spotlight] {
+  position: relative;
+  isolation: isolate;
+}
+[data-cursor-spotlight]::before {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(
+    260px circle at var(--spot-x, 50%) var(--spot-y, 50%),
+    #4c8dff20,
+    transparent 70%
+  );
+  content: "";
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 180ms ease;
+}
+[data-cursor-spotlight] > * {
+  position: relative;
+  z-index: 1;
+}
+[data-cursor-spotlight]:hover::before {
+  opacity: 1;
+}
+@media (max-width: 680px) {
+  .domain-prompt {
+    width: 100%;
+    max-width: none;
+  }
+}
+@media (hover: none), (prefers-reduced-motion: reduce) {
+  [data-cursor-spotlight]::before {
+    display: none;
+    transition: none;
+  }
+}
