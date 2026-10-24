@@ -4,7 +4,7 @@
 
 Querify has two intentionally separate experiences:
 
-1. **Web Research** (the default Query Console mode) accepts questions across topics and languages. Its Vercel endpoint calls Gemini with Google's native Search grounding tool. A successful response must include Google grounding sources and Google's Search Suggestions content. The UI displays the grounded answer, inline citations, source links, and the Search Suggestions widget. It does not query the demo database or invent placeholder rows. If the key is missing or grounding fails, the interface shows an error instead of demo results.
+1. **Web Research** (the default Query Console mode) accepts questions across topics and languages. Its Vercel endpoint calls Gemini's Interactions API with Google's native Search grounding tool. A successful response must include URL-citation annotations and Google's Search Suggestions content. The UI displays the grounded answer, inline citations, source links, and the Search Suggestions widget. It does not query the demo database or invent placeholder rows. If the key is missing or grounding fails, the interface shows an error instead of demo results.
 2. **SQL Demo** is a separate tab for exploring six illustrative/sample datasets. It uses the existing optional OpenAI-compatible model planner or deterministic local rules, validates the plan, and executes only guarded read-only SQL. Its rows are always labeled synthetic and are not current real-world market data.
 
 ### Data flow
@@ -12,8 +12,8 @@ Querify has two intentionally separate experiences:
 ```text
 Web Research question
   → POST /api/v1/research
-  → Gemini generateContent + Google Search grounding
-  → verified grounding metadata (answer, source chunks, citations, Search Suggestions)
+  → Gemini Interactions API + Google Search grounding
+  → response steps (answer, URL-citation annotations, Search Suggestions)
   → current-page answer with clickable sources; no persistence and no sample fallback
 
 SQL Demo question
@@ -45,7 +45,7 @@ The static local Vite preview does not host Vercel serverless functions. Use the
 ## Validation completed
 
 - `pnpm run check` — passed.
-- `pnpm test` — passed: 82 tests across 10 files, including 10 new mocked tests for Google Search grounding, citations/source parsing, missing credentials, and provider errors.
+- `pnpm test` — passed: 84 tests across 10 files, including mocked Interactions API grounding, citation/suggestion parsing, missing credentials, and provider-status errors.
 - `node test-querify-ui.cjs` — passed.
 - `pnpm run build:static` — passed.
 - `pnpm run build` — passed.
@@ -56,8 +56,8 @@ The static local Vite preview does not host Vercel serverless functions. Use the
 
 Vercel rejects Hobby deployments with more than 12 Serverless Functions ([function-count limit](https://vercel.link/function-count-limit)). Keep only the four route handlers in `api/`; shared modules, declarations, and tests belong under `server/querify-api/`. The UI contract test enforces this layout.
 
-A real outbound Gemini Search query was **not** made in this sandbox because no Vercel Gemini secret is available. The implementation and error paths are tested with mocked provider responses; perform one live test after the Vercel key is configured.
+The first live production request after the Gemini key was configured exposed a request/response protocol mismatch. This release switches to the documented Gemini Interactions API; verify a live sourced answer after the new Vercel deployment is Ready.
 
 ## Publication status
 
-The Vercel project is linked to `UICipher/Querify`. Web Research requires `QUERIFY_GEMINI_API_KEY` in the Vercel **Production** environment; keep the key encrypted and server-side, never in a `VITE_` variable or a source file. After the `main` deployment is Ready and the key is set, ask a general-topic question and verify that the returned answer includes Google Search citations. If the key is missing, the UI returns a clear error rather than substituting demo rows.
+The Vercel project is linked to `UICipher/Querify`, and its Gemini key is configured as a server-side **Production** secret. The compatibility fix is being released from `main`; after its deployment is Ready, ask a general-topic question and verify that the returned answer includes Google Search citations. If access, quota, or model configuration fails, the UI returns a targeted error rather than substituting demo rows.

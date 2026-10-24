@@ -98,6 +98,24 @@ export default async function handler(
       });
     }
     if (error instanceof GeminiResearchProviderError) {
+      if (error.status === 401 || error.status === 403) {
+        return sendJson(res, 502, {
+          code: "GEMINI_ACCESS_DENIED",
+          error: "Google rejected the configured Gemini API key or model access. Verify the key and Google Search access, then retry. No demo data was used.",
+        });
+      }
+      if (error.status === 429) {
+        return sendJson(res, 502, {
+          code: "GEMINI_QUOTA_LIMIT",
+          error: "Google Gemini reached a quota or billing limit. Check the Google AI project limits, then retry. No demo data was used.",
+        });
+      }
+      if (error.status === 400 || error.status === 404) {
+        return sendJson(res, 502, {
+          code: "GEMINI_MODEL_OR_REQUEST_REJECTED",
+          error: "Google rejected the Gemini model or request. Verify the model ID and Google Search support, then retry. No demo data was used.",
+        });
+      }
       return sendJson(res, 502, {
         code: error.code,
         error: "Google Search grounding did not return a sourced answer. Check Gemini model access, billing, and key settings, then retry. No demo data was used.",

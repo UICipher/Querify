@@ -27,13 +27,19 @@ export class GeminiResearchConfigurationError extends Error {
 export class GeminiResearchProviderError extends Error {
   readonly code = "GEMINI_SEARCH_FAILED";
 
-  constructor() {
+  constructor(readonly status?: number) {
     super("Google Search grounding did not return a usable sourced answer.");
     this.name = "GeminiResearchProviderError";
   }
 }
 
-const RESEARCH_INSTRUCTIONS = `Answer the user's question using Google Search grounding. The question may concern any topic or country. Prefer current, primary, and credible sources when relevant. Be clear about dates, disagreements, uncertainty, and what the sources do not establish. Do not invent facts or citations. Use concise, readable prose in the user's language. Do not claim that your search covers the entire internet.`;
+const RESEARCH_INSTRUCTIONS = `Use Google Search grounding to research the user's question before answering. The question may concern any topic or country. Prefer current, primary, and credible sources when relevant. Be clear about dates, disagreements, uncertainty, and what the sources do not establish. Do not invent facts or citations. Use concise, readable prose in the user's language. Do not claim that your search covers the entire internet.`;
+const REQUEST_TIMEOUT_MS = 50_000;
+
+type TextOutputBlock = {
+  text: string;
+  annotations: unknown[];
+};
 
 function asRecord(value: unknown): Record<string, unknown> | null {
   return typeof value === "object" && value !== null
@@ -51,6 +57,17 @@ function safeHttpsUrl(value: unknown): string | null {
   }
 }
 
+function integerField(
+  record: Record<string, unknown>,
+  snakeCase: string,
+  camelCase: string
+): number | null {
+  const value = record[snakeCase] ?? record[camelCase];
+  return typeof value === "number" && Number.isInteger(value) && value >= 0
+    ? value
+    : null;
+}
+
 export async function requestGeminiResearch(
   query: string,
   fetcher: typeof fetch = fetch
@@ -64,7 +81,7 @@ export async function requestGeminiResearch(
   let response: Response;
   try {
     response = await fetcher(
-      `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
+      "https://generativelanguage.googleapis.com/v1beta/interactions",
       {
         method: "POST",
         headers: {
@@ -73,79 +90,101 @@ export async function requestGeminiResearch(
           Accept: "application/json",
         },
         body: JSON.stringify({
-          systemInstruction: { parts: [{ text: RESEARCH_INSTRUCTIONS }] },
-          contents: [{ role: "user", parts: [{ text: query }] }],
-          tools: [{ google_search: {} }],
-          generationConfig: { temperature: 0.2, maxOutputTokens: 2048 },
+          model,
+          input: `${RESEARCH_INSTRUCTIONS}\n\nUser question:\n${query}`,
+          tools: [{ type: "google_search" }],
         }),
-        signal: AbortSignal.timeout(9_000),
+        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
       }
     );
   } catch {
     throw new GeminiResearchProviderError();
   }
 
-  if (!response.ok) throw new GeminiResearchProviderError();
+  if (!response.ok) throw new GeminiResearchProviderError(response.status);
+
   const payload = asRecord(await response.json().catch(() => null));
-  const candidates = Array.isArray(payload?.candidates) ? payload.candidates : [];
-  const candidate = asRecord(candidates[0]);
-  const content = asRecord(candidate?.content);
-  const parts = Array.isArray(content?.parts) ? content.parts : [];
-  const answer = parts
-    .map(part => asRecord(part)?.text)
-    .filter((text): text is string => typeof text === "string")
-    .join("")
-    .trim();
-  const metadata = asRecord(candidate?.groundingMetadata);
-  const chunks = Array.isArray(metadata?.groundingChunks)
-    ? metadata.groundingChunks
-    : [];
+  const interaction = asRecord(payload?.interaction) ?? payload;
+  const steps = Array.isArray(interaction?.steps) ? interaction.steps : [];
+  const textBlocks: TextOutputBlock[] = [];
+  const suggestions: string[] = [];
+
+  for (const value of steps) {
+    const step = asRecord(value);
+    if (!step) continue;
+
+    if (step.type === "google_search_result") {
+      const results = Array.isArray(step.result)
+        ? step.result
+        : step.result
+          ? [step.result]
+          : [];
+      for (const resultValue of results) {
+        const result = asRecord(resultValue);
+        const suggestion = result?.search_suggestions ?? result?.searchSuggestions;
+        if (typeof suggestion === "string" && suggestion.trim()) {
+          suggestions.push(suggestion.trim());
+        }
+      }
+    }
+
+    if (step.type !== "model_output" || !Array.isArray(step.content)) continue;
+    for (const contentValue of step.content) {
+      const content = asRecord(contentValue);
+      if (content?.type !== "text" || typeof content.text !== "string") continue;
+      textBlocks.push({
+        text: content.text,
+        annotations: Array.isArray(content.annotations) ? content.annotations : [],
+      });
+    }
+  }
+
+  const joinedAnswer = textBlocks.map(block => block.text).join("\n");
+  const leadingWhitespace = joinedAnswer.length - joinedAnswer.trimStart().length;
+  const answer = joinedAnswer.trim();
   const sources: GroundedSource[] = [];
-  const sourceIndexMap = new Map<number, number>();
+  const sourceIndexByUrl = new Map<string, number>();
+  const citations: GroundedCitation[] = [];
+  let blockOffset = 0;
 
-  chunks.forEach((value, originalIndex) => {
-    const chunk = asRecord(value);
-    const web = asRecord(chunk?.web);
-    const url = safeHttpsUrl(web?.uri);
-    if (!url) return;
-    const title = typeof web?.title === "string" && web.title.trim()
-      ? web.title.trim().slice(0, 240)
-      : new URL(url).hostname;
-    let sourceIndex = sources.findIndex(source => source.url === url);
-    if (sourceIndex < 0) {
-      sourceIndex = sources.push({ title, url }) - 1;
+  for (const block of textBlocks) {
+    for (const annotationValue of block.annotations) {
+      const annotation = asRecord(annotationValue);
+      if (annotation?.type !== "url_citation") continue;
+      const url = safeHttpsUrl(annotation.url);
+      const blockEndIndex = integerField(annotation, "end_index", "endIndex");
+      if (!url || blockEndIndex === null || blockEndIndex > block.text.length) continue;
+
+      let sourceIndex = sourceIndexByUrl.get(url);
+      if (sourceIndex === undefined) {
+        const title = typeof annotation.title === "string" && annotation.title.trim()
+          ? annotation.title.trim().slice(0, 240)
+          : new URL(url).hostname;
+        sourceIndex = sources.push({ title, url }) - 1;
+        sourceIndexByUrl.set(url, sourceIndex);
+      }
+
+      const endIndex = blockOffset + blockEndIndex - leadingWhitespace;
+      if (endIndex < 0 || endIndex > answer.length) continue;
+      const existing = citations.find(citation => citation.endIndex === endIndex);
+      if (existing) {
+        if (!existing.sourceIndices.includes(sourceIndex)) {
+          existing.sourceIndices.push(sourceIndex);
+        }
+      } else {
+        citations.push({ endIndex, sourceIndices: [sourceIndex] });
+      }
     }
-    sourceIndexMap.set(originalIndex, sourceIndex);
-  });
+    blockOffset += block.text.length + 1;
+  }
 
-  const rawSupports = Array.isArray(metadata?.groundingSupports)
-    ? metadata.groundingSupports
-    : [];
-  const citations: GroundedCitation[] = rawSupports.flatMap(value => {
-    const support = asRecord(value);
-    const segment = asRecord(support?.segment);
-    const endIndex = segment?.endIndex;
-    if (typeof endIndex !== "number" || !Number.isInteger(endIndex) || endIndex < 0) {
-      return [];
-    }
-    const rawIndices = Array.isArray(support?.groundingChunkIndices)
-      ? support.groundingChunkIndices
-      : [];
-    const sourceIndices = [...new Set(rawIndices
-      .filter((index): index is number => typeof index === "number")
-      .map(index => sourceIndexMap.get(index))
-      .filter((index): index is number => index !== undefined))];
-    return sourceIndices.length ? [{ endIndex, sourceIndices }] : [];
-  });
-
-  const searchEntryPoint = asRecord(metadata?.searchEntryPoint);
-  const searchSuggestionsHtml = searchEntryPoint?.renderedContent;
+  const searchSuggestionsHtml = suggestions.join("\n");
   if (
     !answer ||
     answer.length > 20_000 ||
     !sources.length ||
-    typeof searchSuggestionsHtml !== "string" ||
-    !searchSuggestionsHtml.trim() ||
+    !citations.length ||
+    !searchSuggestionsHtml ||
     searchSuggestionsHtml.length > 50_000
   ) {
     throw new GeminiResearchProviderError();

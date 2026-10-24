@@ -1,6 +1,12 @@
 {
+  "$schema": "https://openapi.vercel.sh/vercel.json",
   "buildCommand": "pnpm run build:static",
   "outputDirectory": "dist/public",
   "framework": "vite",
-  "cleanUrls": true
+  "cleanUrls": true,
+  "functions": {
+    "api/v1/research.ts": {
+      "maxDuration": 60
+    }
+  }
 }
