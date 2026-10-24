@@ -9,6 +9,11 @@ import {
   type LiveQueryResponse,
 } from "../lib/queryApi";
 import {
+  executeWebResearch,
+  type WebResearchResponse,
+} from "../lib/webResearchApi";
+import { WebResearchPanel } from "../components/WebResearchPanel";
+import {
   createDemoResult,
   DEMO_BASE_SQL,
   demoCompanies,
@@ -95,6 +100,14 @@ type TeamMember = {
   attribution?: string;
 };
 const clarificationStatus = "clarification_needed" as const;
+const webResearchSuggestions = [
+  "What are the most important climate and energy developments this month?",
+  "Explain recent advances in treating Alzheimer's disease and link the evidence.",
+  "Compare the latest economic outlooks from major global institutions.",
+  "What changed in AI regulation across major regions this year?",
+  "Summarize recent space science discoveries from primary sources.",
+  "Find current guidance on safe drinking water from public health authorities.",
+];
 
 const team: TeamMember[] = [
   {
@@ -232,6 +245,8 @@ function navLabel(view: View) {
 export default function Home() {
   const [view, setView] = useState<View>("overview");
   const [query, setQuery] = useState("");
+  const [webResearchMode, setWebResearchMode] = useState(true);
+  const [researchResult, setResearchResult] = useState<WebResearchResponse | null>(null);
   const [selectedMetric, setSelectedMetric] = useState("revenue");
   const [clarifying, setClarifying] = useState(false);
   const [clarificationMode, setClarificationMode] = useState<
@@ -449,7 +464,7 @@ export default function Home() {
     const submittedQuery = queryText.trim();
     const text = submittedQuery.toLowerCase();
     if (!text) {
-      notify("Type an analytical question first.");
+      notify(webResearchMode ? "Type a question about any topic." : "Type an analytical question first.");
       return;
     }
     setApiError("");
@@ -458,6 +473,20 @@ export default function Home() {
     setClarificationDraft("");
     setClarifying(false);
     setConversationId("");
+    if (webResearchMode) {
+      setResult(null);
+      setResearchResult(null);
+      setIsExecuting(true);
+      try {
+        setResearchResult(await executeWebResearch(submittedQuery));
+      } catch (error) {
+        setResearchResult(null);
+        setApiError((error as Error).message || "Web research failed. No demo data was used.");
+      } finally {
+        setIsExecuting(false);
+      }
+      return;
+    }
     if (/;|--|\b(drop|delete|update|insert|alter|truncate)\b/i.test(submittedQuery)) {
       const message =
         "Query blocked (HTTP 422): only one read-only SELECT statement is permitted. Remove mutations, comments, semicolons, or stacked statements.";
@@ -713,7 +742,7 @@ export default function Home() {
         <span className="brand-mark calligraphy-q">Q</span>
         <span>
           <b>Querify</b>
-          <small>SQL WORKSPACE</small>
+          <small>RESEARCH + SQL</small>
         </span>
       </button>
       <nav className={`main-nav ${mobileNav ? "open" : ""}`}>
@@ -741,8 +770,12 @@ export default function Home() {
         ))}
       </nav>
       <div className="header-actions">
-        <select className="db-selector" aria-label="Current demo database" disabled>
-          <option>SQLite · Read-only sample</option>
+        <select
+          className="db-selector"
+          aria-label={view === "console" && webResearchMode ? "Current web research source" : "Current demo database"}
+          disabled
+        >
+          <option>{view === "console" && webResearchMode ? "Google Search · Public web" : "SQLite · Read-only sample"}</option>
         </select>
         <button
           className="auth-button"
@@ -753,7 +786,7 @@ export default function Home() {
           <LockKeyhole size={13} /> Security & Auth
         </button>
         <span className="demo-badge">
-          <span /> Demo Mode
+          <span /> {view === "console" && webResearchMode ? "Web Research" : "Demo Mode"}
         </span>
         <a
           href="https://github.com/UICipher/Querify"
@@ -778,18 +811,18 @@ export default function Home() {
           <span className="brand-mark calligraphy-q">Q</span>
           <span>
             <b>Querify</b>
-            <small>SQL WORKSPACE</small>
+            <small>RESEARCH + SQL</small>
           </span>
         </div>
         <p>
-          Ask in English. Get the right SQL.
+          Ask a question. Follow the sources.
           <br />
-          A structured query workspace for validated read-only SQL, sample data,
-          and clear clarification when a question needs more detail.
+          Research any topic against Google's public web index, or switch to the
+          separate read-only SQL demo. Web answers are source-linked; demo rows
+          stay clearly labeled as synthetic.
         </p>
         <div className="footer-proof">
-          <ShieldCheck size={14} /> Read-only query guard <span>•</span> 6
-          synthetic tables
+          <Search size={14} /> Google Search citations <span>•</span> SQL demo remains separate
         </div>
       </div>
       <div>
@@ -838,10 +871,12 @@ export default function Home() {
         </div>
       </div>
       <div className="footer-bottom">
-        © 2026 Querify. Designed & engineered by Umar Imran, Nazish Saghir,
+        © 2026 Querify. Designed & engineered by{" "}
+        <strong className="footer-credit-lead">Umar Imran</strong>, Nazish Saghir,
         and Zuryat Fatima.{" "}
         <span>
-          <Database size={13} /> Synthetic sample data · Read-only
+          {view === "console" && webResearchMode ? <Search size={13} /> : <Database size={13} />}
+          {view === "console" && webResearchMode ? " Public web research · sources linked" : " Synthetic sample data · Read-only"}
         </span>
       </div>
     </footer>
@@ -851,41 +886,42 @@ export default function Home() {
     <section className="page overview-page">
       <div className="hero">
         <div className="hero-kicker">
-          <span className="live-dot" /> Querify · Structured SQL v1.3{" "}
-          <b>Read-only</b>
+          <span className="live-dot" /> Querify · Web Research + SQL{" "}
+          <b>Sources linked</b>
         </div>
         <h1>
-          Ask in English.
+          Ask anything.
           <br />
-          <em>Get the right SQL.</em>
+          <em>Follow the evidence.</em>
         </h1>
         <p>
-          Turn a plain-language question into SQL you can inspect. Querify works
-          with six illustrative datasets—not live business data—and shows
-          whether each plan came from a model or built-in rules.
+          Research any topic with Google's public web index and inspect the
+          sources, or switch to a separate read-only SQL demo built on clearly
+          labeled synthetic data. Web research requires a server-side Gemini key.
         </p>
         <div className="hero-actions">
           <button
             className="primary-button interactive-btn transition-all duration-200 ease-out hover:scale-[1.01] hover:-translate-y-0.5 hover:shadow-lg hover:shadow-cyan-500/10 active:scale-[0.98] cursor-pointer"
             onClick={() => go("console")}
           >
-            → &nbsp; Try the demo <ArrowRight size={15} />
+            → &nbsp; Explore web research <ArrowRight size={15} />
           </button>
-          <a
+          <button
             className="secondary-button interactive-btn transition-all duration-200 ease-out hover:scale-[1.01] hover:-translate-y-0.5 hover:shadow-lg hover:shadow-cyan-500/10 active:scale-[0.98] cursor-pointer"
-            href="https://github.com/UICipher/Querify"
-            target="_blank"
-            rel="noreferrer"
+            onClick={() => {
+              setWebResearchMode(false);
+              go("console");
+            }}
           >
-            <Github size={15} /> View on GitHub
-          </a>
+            <Database size={15} /> Try SQL demo
+          </button>
         </div>
         <div
           className="pipeline-card"
           aria-label="Querify four-step workflow demo"
         >
           <div className="pipeline-top">
-            <span>querify-pipeline // clarification-loop.preview</span>
+            <span>querify-pipeline // SQL demo · synthetic rows</span>
             <div
               className="pipeline-stepper"
               role="group"
@@ -1022,20 +1058,21 @@ export default function Home() {
   );
 
   const Console = () => (
-    <section className={`page console-page ${focusMode ? "focus-mode" : ""}`}>
+    <section className={`page console-page ${focusMode ? "focus-mode" : ""} ${webResearchMode ? "web-research-mode" : "sql-demo-mode"}`}>
       <div className="page-heading">
         <div>
-          <span>› STRUCTURED QUERY WORKSPACE</span>
-          <h2>From question to verified SQL.</h2>
+          <span>{webResearchMode ? "› OPEN WEB RESEARCH" : "› STRUCTURED QUERY WORKSPACE"}</span>
+          <h2>{webResearchMode ? "Ask anything. Search beyond the demo." : "From question to verified SQL."}</h2>
           <p>
-            Results use synthetic sample tables, never a live database. A
-            configured model may draft the SQL; otherwise built-in rules handle
-            supported questions. Querify labels the actual planner on each result.
+            {webResearchMode
+              ? "Gemini searches Google's public web index for this question and returns a sourced answer. Sources vary by topic and availability; this is broad search, not an unlimited copy of the internet."
+              : "Results use synthetic sample tables, never a live database. A configured model may draft the SQL; otherwise built-in rules handle supported questions. Querify labels the actual planner on each result."}
           </p>
         </div>
         <div className="page-heading-actions">
           <div className="guard-pill">
-            <ShieldCheck size={14} /> Read-only SQL Guard
+            {webResearchMode ? <Search size={14} /> : <ShieldCheck size={14} />}
+            {webResearchMode ? "Google Search · citations" : "Read-only SQL Guard"}
           </div>
           <button
             className={`focus-mode-toggle ${focusMode ? "active" : ""}`}
@@ -1048,6 +1085,42 @@ export default function Home() {
         </div>
       </div>
       <div className="console-card" data-cursor-spotlight>
+        <div className="workspace-mode-switch" role="tablist" aria-label="Choose research mode">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={webResearchMode}
+            className={webResearchMode ? "active" : ""}
+            onClick={() => {
+              setWebResearchMode(true);
+              setResult(null);
+              setResearchResult(null);
+              setApiError("");
+              setShowRecoveryPrompts(false);
+            }}
+          >
+            <Search size={14} /> Web Research
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={!webResearchMode}
+            className={!webResearchMode ? "active" : ""}
+            onClick={() => {
+              setWebResearchMode(false);
+              setResearchResult(null);
+              setResult(null);
+              setApiError("");
+            }}
+          >
+            <Table2 size={14} /> SQL Demo
+          </button>
+        </div>
+        <p className="workspace-mode-note">
+          {webResearchMode
+            ? "Search any topic in any language. Each answer is tied to the live search result and its sources; no sample-table fallback."
+            : "Explore the read-only synthetic sample tables. These rows are illustrative, not live business data."}
+        </p>
         <div className="input-row">
           <input
             value={query}
@@ -1060,20 +1133,21 @@ export default function Home() {
                 setClarificationDraft("");
                 setLastClarificationAnswer("");
                 setResult(null);
+                setResearchResult(null);
                 setApiError("");
               }
               setQuery(next);
             }}
             onKeyDown={e => e.key === "Enter" && submitQuery()}
             className="focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500 transition-all duration-200"
-            placeholder="e.g. Show restaurants in Seattle rated above 4.5"
+            placeholder={webResearchMode ? "Ask about any topic — science, world events, business, culture…" : "e.g. Show restaurants in Seattle rated above 4.5"}
           />
           <button
             disabled={isExecuting}
             className="query-button interactive-btn transition-all duration-200 ease-out hover:scale-[1.01] hover:-translate-y-0.5 hover:shadow-lg hover:shadow-cyan-500/10 active:scale-[0.98] cursor-pointer"
             onClick={() => void submitQuery()}
           >
-            {isExecuting ? "Running…" : "Query ↵"}
+            {isExecuting ? (webResearchMode ? "Searching…" : "Running…") : (webResearchMode ? "Search web ↵" : "Query ↵")}
           </button>
           <button
             className={`voice-button ${isListening ? "listening" : ""}`}
@@ -1134,7 +1208,50 @@ export default function Home() {
             </div>
           </div>
         )}
-        <div className="prompt-groups">
+        {webResearchMode && (
+          <div className="web-research-suggestions">
+            <div className="prompt-heading">
+              <div>
+                <span className="group-label">Explore across topics</span>
+                <p>These are starters, not a fixed catalogue. Ask your own question in any language.</p>
+              </div>
+              <button
+                className="surprise-button"
+                type="button"
+                disabled={isExecuting}
+                onClick={() => {
+                  const sample = webResearchSuggestions[Math.floor(Math.random() * webResearchSuggestions.length)];
+                  setQuery(sample);
+                  setResult(null);
+                  setResearchResult(null);
+                  setApiError("");
+                  void submitQuery(sample);
+                }}
+              >
+                <Shuffle size={12} /> Topic roulette
+              </button>
+            </div>
+            <div className="research-topic-stream">
+              {webResearchSuggestions.map((sample, index) => (
+                <button
+                  className="research-topic-chip"
+                  data-cursor-spotlight
+                  key={sample}
+                  onClick={() => {
+                    setQuery(sample);
+                    setResult(null);
+                    setResearchResult(null);
+                    setApiError("");
+                    void submitQuery(sample);
+                  }}
+                >
+                  <span>0{index + 1}</span>{sample}<ArrowRight size={13} />
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+        <div className={`prompt-groups ${webResearchMode ? "sql-demo-prompts" : ""}`}>
           <div>
             <span className="group-label">
               ⓘ Ambiguous Questions (Triggers Clarification):
@@ -1236,40 +1353,45 @@ export default function Home() {
       <aside className="studio-sidebar">
         <div className="studio-card query-mode-card" data-cursor-spotlight>
           <h3>
-            <Table2 size={15} /> Query planner
+            {webResearchMode ? <Search size={15} /> : <Table2 size={15} />}
+            {webResearchMode ? "General web research" : "Query planner"}
           </h3>
           <p>
-            A configured model can plan the SQL. If no model is available,
-            built-in rules handle supported prompts. Each result says which path ran.
+            {webResearchMode
+              ? "Gemini can search across topics using Google's public web index, then return a cited answer. Coverage depends on sources found for each question."
+              : "A configured model can plan the SQL. If no model is available, built-in rules handle supported prompts. Each result says which path ran."}
           </p>
           <div className="guardrail-row">
-            <span>Planner status</span>
-            <b>SHOWN PER RESULT</b>
+            <span>{webResearchMode ? "Topic range" : "Planner status"}</span>
+            <b>{webResearchMode ? "GENERAL WEB" : "SHOWN PER RESULT"}</b>
           </div>
           <div className="guardrail-row">
-            <span>Model provider</span>
-            <b>OPTIONAL</b>
+            <span>{webResearchMode ? "Citations" : "Model provider"}</span>
+            <b>{webResearchMode ? "SOURCE LINKS" : "OPTIONAL"}</b>
           </div>
           <div className="guardrail-row">
-            <span>Data</span>
-            <b>SYNTHETIC SAMPLES</b>
+            <span>{webResearchMode ? "Result storage" : "Data"}</span>
+            <b>{webResearchMode ? "NOT SAVED" : "SYNTHETIC SAMPLES"}</b>
           </div>
           <button
             className="studio-action"
             disabled={isExecuting}
             onClick={() => {
-              const sample = "Show restaurants in Seattle rated above 4.5";
+              const sample = webResearchMode
+                ? webResearchSuggestions[0]
+                : "Show restaurants in Seattle rated above 4.5";
               setQuery(sample);
               setResult(null);
+              setResearchResult(null);
               setApiError("");
               setShowRecoveryPrompts(false);
               void submitQuery(sample);
             }}
           >
-            Run an example query <ArrowRight size={13} />
+            {webResearchMode ? "Try a broad web question" : "Run an example query"} <ArrowRight size={13} />
           </button>
         </div>
-        <div className="studio-card guardrail-card" data-cursor-spotlight>
+        {!webResearchMode && <div className="studio-card guardrail-card" data-cursor-spotlight>
           <h3>
             <ShieldCheck size={15} /> SqlSecurityGuard
           </h3>
@@ -1285,15 +1407,22 @@ export default function Home() {
             DDL, mutation queries, comments, semicolons, and unconstrained
             execution are blocked before the database boundary.
           </p>
-        </div>
+        </div>}
         <div className="studio-card source-card" data-cursor-spotlight>
           <h3>
-            <Database size={15} /> Workspace source
+            {webResearchMode ? <Search size={15} /> : <Database size={15} />}
+            {webResearchMode ? "Search boundary" : "Workspace source"}
           </h3>
-          <p>6 seeded sample tables · read-only SQLite execution</p>
-          <button className="text-button" onClick={() => go("explorer")}>
-            Inspect schema <ArrowRight size={12} />
-          </button>
+          {webResearchMode ? (
+            <p>Publicly indexed web pages only. Search suggestions and source links appear with each answer; results are not cached in Querify.</p>
+          ) : (
+            <>
+              <p>6 seeded sample tables · read-only SQLite execution</p>
+              <button className="text-button" onClick={() => go("explorer")}>
+                Inspect schema <ArrowRight size={12} />
+              </button>
+            </>
+          )}
         </div>
       </aside>
       {clarifying && (
@@ -1430,7 +1559,30 @@ export default function Home() {
           </div>
         </div>
       )}
-      {result ? (
+      {webResearchMode ? (
+        researchResult ? (
+          <WebResearchPanel
+            result={researchResult}
+            question={query}
+            onFollowUp={nextQuestion => {
+              setQuery(nextQuestion);
+              setResearchResult(null);
+              setApiError("");
+              void submitQuery(nextQuestion);
+            }}
+          />
+        ) : (
+          <div className="ready-card web-research-ready" data-cursor-spotlight>
+            <div className="ready-icon"><Search size={22} /></div>
+            <h3>{isExecuting ? "Searching current web sources…" : "Start with any question."}</h3>
+            <p>
+              {isExecuting
+                ? "Gemini is checking Google's public web index. The answer will appear with citations and Search Suggestions."
+                : "Querify searches across topics instead of choosing a preset dataset. Every successful research answer needs sources; no demo rows are substituted."}
+            </p>
+          </div>
+        )
+      ) : result ? (
         ResultPanel()
       ) : (
         <div className="ready-card" data-cursor-spotlight>

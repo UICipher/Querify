@@ -1,5 +1,7 @@
 const fs = require("node:fs");
 const home = fs.readFileSync("client/src/pages/Home.tsx", "utf8");
+const researchPanel = fs.readFileSync("client/src/components/WebResearchPanel.tsx", "utf8");
+const researchApi = fs.readFileSync("api/geminiSearch.ts", "utf8") + fs.readFileSync("api/v1/research.ts", "utf8");
 const css = fs.readFileSync("client/src/index.css", "utf8");
 const routes = JSON.parse(
   fs.readFileSync("client/public/manus-routes.json", "utf8")
@@ -44,6 +46,17 @@ for (const token of [
   "Synthetic sample data",
   "Surprise me",
   "Focus mode",
+  "Web Research",
+  "Search web ↵",
+  "Topic roulette",
+  "webResearchMode",
+  "General web research",
+  "Ask anything.",
+  "Follow the evidence.",
+  "Explore web research",
+  "Try SQL demo",
+  "Google Search · Public web",
+  "Current web research source",
   "plannerMode",
   "Run an example query",
   "SQLite · Read-only sample",
@@ -53,6 +66,14 @@ for (const token of [
   if (!home.includes(token))
     throw new Error(`Missing UI contract token: ${token}`);
 }
+for (const token of ["searchSuggestionsHtml", "Grounded answer", "Sources returned for this question", "Go deeper", "Find another perspective"]) {
+  if (!researchPanel.includes(token))
+    throw new Error(`Missing grounded research UI contract: ${token}`);
+}
+for (const token of ["google_search", "QUERIFY_GEMINI_API_KEY", "No demo data was used", "GEMINI_SEARCH_FAILED"]) {
+  if (!researchApi.includes(token))
+    throw new Error(`Missing grounded research API contract: ${token}`);
+}
 for (const token of [
   ".engineering-team-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr))",
   ".person-badge.female",
@@ -61,6 +82,10 @@ for (const token of [
   "Manrope",
   "IBM Plex Mono",
   ".console-page.focus-mode",
+  ".web-research-mode.console-page",
+  ".research-topic-chip",
+  ".research-answer",
+  ".google-search-suggestions iframe",
   ".surprise-button:hover:not(:disabled)",
   ".planner-pill.ai_model",
 ]) {
@@ -88,7 +113,7 @@ for (const name of [
 }
 if (!home.includes("umerimran1882@gmail.com"))
   throw new Error("Missing exact contact email");
-if (!home.includes("© 2026 Querify. Designed & engineered by Umar Imran, Nazish Saghir,"))
+if (!home.includes('className="footer-credit-lead">Umar Imran</strong>, Nazish Saghir,'))
   throw new Error("Copyright byline must list Umar first without changing the team cards");
 if (home.includes("Product lead") || home.includes("product-owner"))
   throw new Error("Owner attribution must not be present");

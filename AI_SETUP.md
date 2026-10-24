@@ -23,3 +23,20 @@ If the key or model ID is missing, the API uses no-key structured mode and retur
 The endpoint limits request bodies to 16 KiB, natural-language prompts to 800 characters, results to at most 50 rows, and applies a best-effort per-serverless-instance request throttle. Because Vercel functions can scale across instances, this in-memory throttle is **not** a global production rate limiter. Before sharing the public demo widely, set provider-side spend limits/alerts and add a shared rate limiter or authenticated access if stronger abuse protection is needed.
 
 The local static preview intentionally does not contain a provider key or host the Vercel serverless function. The deployed Vercel API runs the no-key structured mode by default. Local browser code never receives provider credentials.
+
+
+## General Web Research: Gemini + Google Search
+
+The Query Console now opens in **Web Research** mode. This is separate from **SQL Demo**: it sends a question about any topic to Gemini with Google's Search grounding tool, then displays the answer, inline source citations, source links, and Google's Search Suggestions widget. It does not query or return rows from the six synthetic SQLite tables. Results are shown only for the current browser view and are not written to Querify's audit history or local storage.
+
+### Configure the server-side key
+
+1. In the Querify Vercel project, open **Settings → Environment Variables**.
+2. Add `QUERIFY_GEMINI_API_KEY` with the Gemini API key. Keep it encrypted/server-side; do not paste it into chat, commit it, or use a `VITE_` prefix.
+3. `QUERIFY_GEMINI_MODEL` is optional and defaults to `gemini-3.8-flash`. Use a model enabled for Google Search grounding on your Google AI account.
+4. Add the variables to **Production** (and **Preview** if needed), save, then redeploy the current commit.
+5. In Querify, leave **Web Research** selected and ask a question on any topic or in any language. A successful answer shows Google Search grounding and cited sources. If the key is missing, model access fails, or Google returns no grounding metadata, Querify displays an error and does **not** substitute demo rows.
+
+This searches publicly indexed web pages available to Google at request time; it cannot fetch every page or guarantee exhaustive coverage. Gemini decides whether to search and may run multiple Google Search requests for one user prompt. Google currently documents 5,000 free Google Search requests per month shared across Gemini 3 and newer models, then $14 per 1,000 requests; billing/availability depend on your account and can change. Set quota and billing alerts before sharing the endpoint publicly. See [Google Search grounding docs](https://ai.google.dev/gemini-api/docs/generate-content/google-search), [Gemini pricing](https://ai.google.dev/gemini-api/docs/pricing), and [Gemini API additional terms](https://aistudio.google.com/docs/terms).
+
+The web-research endpoint applies a best-effort six-request-per-minute throttle per serverless instance. Vercel may scale across instances, so this is not a global rate limiter. For a public production launch, add a shared rate limiter or authenticated access and use Google's project quotas to control spend. Preserve Google's grounded answer citations and Search Suggestions widget when changing the display; do not cache or repurpose grounded results.
