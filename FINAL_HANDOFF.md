@@ -27,9 +27,9 @@ Google Search coverage is broad and topic-agnostic, but limited to pages availab
 
 ## Design and interactions
 
-The previous SQL-only, box-heavy presentation is now a warm-charcoal editorial layout with Manrope, DM Serif Display, and IBM Plex Mono. The Overview introduces both modes. In Web Research, the Query Console has a clear mode switch, rounded search field, open topic list, source-status rail, and citation-first answer surface; on narrower screens the columns stack. SQL Demo retains its familiar read-only flow and disclosure.
+The previous SQL-only, box-heavy presentation is now a deep-charcoal editorial layout with cool slate-blue accents, Manrope, DM Serif Display, and IBM Plex Mono. The Overview introduces both modes. In Web Research, the Query Console has a clear mode switch, rounded search field, open topic list, source-status rail, and citation-first answer surface; on narrower screens the columns stack. SQL Demo retains its familiar read-only flow and disclosure.
 
-Additional interactions include **Topic roulette** for cross-topic starting questions, **Go deeper** and **Find another perspective** for new grounded searches, **Focus mode** to reduce distractions, and the existing pointer-follow spotlights/hover details. The 2026 byline explicitly highlights **Umar Imran** first; the Engineering Team cards remain in their existing order.
+Additional interactions include **Topic roulette** for cross-topic starting questions, **Go deeper** and **Find another perspective** for new grounded searches, **Focus mode** to reduce distractions, and the existing pointer-follow spotlights/hover details. The 2026 byline presents Umar Imran, Nazish Saghir, and Zuryat Fatima together, with the same emphasis for all three; the Engineering Team cards remain in their existing order.
 
 ## Required deployment setup
 
@@ -50,10 +50,10 @@ The static local Vite preview does not host Vercel serverless functions. Use the
 - `pnpm run build:static` — passed.
 - `pnpm run build` — passed.
 - `git diff --check origin/main` — passed.
-- Browser preview confirmed the default Web Research screen, mode-specific header/data labels, separate SQL Demo behavior, and Umar-first 2026 credit.
+- Browser preview confirmed the default Web Research screen, mode-specific header/data labels, separate SQL Demo behavior, and the grouped three-person 2026 credit.
 
 A real outbound Gemini Search query was **not** made in this sandbox because no Vercel Gemini secret is available. The implementation and error paths are tested with mocked provider responses; perform one live test after the Vercel key is configured.
 
 ## Publication status
 
-The current public deployment has not been changed by this handoff: this environment is not authenticated to GitHub, the Vercel CLI is unavailable, and the Gemini API key has not been provided to Vercel. The companion patch is based on the latest fetched `origin/main`, and the full source ZIP is self-contained. Apply the patch (or use the source ZIP), set the Vercel environment variable, push/deploy, then test one topic and verify the visible citations.
+The Vercel project is linked to `UICipher/Querify`. Web Research requires `QUERIFY_GEMINI_API_KEY` in the Vercel **Production** environment; keep the key encrypted and server-side, never in a `VITE_` variable or a source file. After the `main` deployment is Ready and the key is set, ask a general-topic question and verify that the returned answer includes Google Search citations. If the key is missing, the UI returns a clear error rather than substituting demo rows.

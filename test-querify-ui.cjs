@@ -57,9 +57,17 @@ for (const token of [
   "Try SQL demo",
   "Google Search · Public web",
   "Current web research source",
+  "Search the public web",
+  "Review linked sources",
+  "OPTIONAL SQL DEMO",
+  "Synthetic SQL demo · read-only",
+  "querify-research // Google Search grounding",
+  "No demo-data fallback",
+  "Run a live research question →",
+  "What are recent advances in long-duration energy storage?",
   "plannerMode",
   "Run an example query",
-  "SQLite · Read-only sample",
+  "SQL Demo · Synthetic data",
   "engineering-team-grid",
   "SqlSecurityGuard",
 ]) {
@@ -88,6 +96,10 @@ for (const token of [
   ".google-search-suggestions iframe",
   ".surprise-button:hover:not(:disabled)",
   ".planner-pill.ai_model",
+  "--querify-cool-bg: #090d14",
+  "--querify-cool-accent: #a8bad6",
+  ".footer-credit-line",
+  ".footer-credit-team",
 ]) {
   if (!css.includes(token))
     throw new Error(`Missing theme/layout contract token: ${token}`);
@@ -113,8 +125,16 @@ for (const name of [
 }
 if (!home.includes("umerimran1882@gmail.com"))
   throw new Error("Missing exact contact email");
-if (!home.includes('className="footer-credit-lead">Umar Imran</strong>, Nazish Saghir,'))
-  throw new Error("Copyright byline must list Umar first without changing the team cards");
+if (!home.includes('className="footer-credit-team">\n            Umar Imran, Nazish Saghir, and Zuryat Fatima'))
+  throw new Error("Copyright byline must present all three contributors together and equally");
+if (home.includes("footer-credit-lead"))
+  throw new Error("Copyright byline must not single out one contributor");
+if (
+  home.includes("querify-pipeline // SQL demo · synthetic rows") ||
+  home.includes("company_name, revenue_millions") ||
+  home.includes('"Show me the best performing AI companies in 2024"')
+)
+  throw new Error("Overview must not show a canned synthetic SQL result preview");
 if (home.includes("Product lead") || home.includes("product-owner"))
   throw new Error("Owner attribution must not be present");
 for (const profile of [

@@ -202,33 +202,31 @@ const surpriseQueries = [
 const pipelineStages = [
   {
     label: "Step 1",
-    title: "HUMAN QUESTION",
-    badge: "Natural English Input",
-    prompt: '›_ "Show me the best performing AI companies in 2024"',
-    detail: 'ⓘ Captured: "best performing" needs a business definition.',
+    title: "YOUR QUESTION",
+    badge: "Any topic",
+    prompt: "Start with any question you want to research.",
+    detail: "No fixed dataset or topic list is required.",
   },
   {
     label: "Step 2",
-    title: "CLARIFICATION REQUIRED",
-    badge: "Execution paused",
-    prompt:
-      "“Best performing” could mean revenue, net profit, growth, or investment return.",
-    detail: "Querify asks before it guesses or runs a query.",
+    title: "PUBLIC WEB SEARCH",
+    badge: "Google Search grounding",
+    prompt: "Gemini searches the public web for sources related to your question.",
+    detail: "Coverage depends on pages available in Google's index.",
   },
   {
     label: "Step 3",
-    title: "BUSINESS RULE SELECTED",
-    badge: "Metric made explicit",
-    prompt: "Rank by annual revenue · FY 2024 · USD millions",
-    detail: "The selected business rule becomes a concrete query constraint.",
+    title: "SOURCE CHECK",
+    badge: "Citations required",
+    prompt: "Claims are returned with links to the sources used.",
+    detail: "Open a source to check the original page and context.",
   },
   {
     label: "Step 4",
-    title: "VERIFIED SQL",
-    badge: "SELECT-only guard",
-    prompt:
-      "SELECT company_name, revenue_millions … ORDER BY revenue_millions DESC LIMIT 10;",
-    detail: "One read-only statement is checked before the result is shown.",
+    title: "GROUNDED ANSWER",
+    badge: "No demo-data fallback",
+    prompt: "A source-linked answer for the topic you asked about.",
+    detail: "If live research is unavailable, Querify reports the error instead of inventing results.",
   },
 ];
 
@@ -345,6 +343,7 @@ export default function Home() {
     window.setTimeout(() => setToast(""), 2200);
   };
   const go = (next: View) => {
+    if (next === "explorer") setWebResearchMode(false);
     setView(next);
     setMobileNav(false);
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -772,21 +771,23 @@ export default function Home() {
       <div className="header-actions">
         <select
           className="db-selector"
-          aria-label={view === "console" && webResearchMode ? "Current web research source" : "Current demo database"}
+          aria-label={webResearchMode ? "Current web research source" : "Current SQL demo database"}
           disabled
         >
-          <option>{view === "console" && webResearchMode ? "Google Search · Public web" : "SQLite · Read-only sample"}</option>
+          <option>{webResearchMode ? "Google Search · Public web" : "SQL Demo · Synthetic data"}</option>
         </select>
         <button
           className="auth-button"
           onClick={() =>
-            notify("Security & Auth controls are active in demo mode")
+            notify(webResearchMode
+              ? "Web Research requires a server-side Gemini key; it is never exposed in the browser."
+              : "SQL Demo uses read-only synthetic data.")
           }
         >
           <LockKeyhole size={13} /> Security & Auth
         </button>
         <span className="demo-badge">
-          <span /> {view === "console" && webResearchMode ? "Web Research" : "Demo Mode"}
+          <span /> {webResearchMode ? "Web Research" : "SQL Demo"}
         </span>
         <a
           href="https://github.com/UICipher/Querify"
@@ -871,12 +872,15 @@ export default function Home() {
         </div>
       </div>
       <div className="footer-bottom">
-        © 2026 Querify. Designed & engineered by{" "}
-        <strong className="footer-credit-lead">Umar Imran</strong>, Nazish Saghir,
-        and Zuryat Fatima.{" "}
-        <span>
-          {view === "console" && webResearchMode ? <Search size={13} /> : <Database size={13} />}
-          {view === "console" && webResearchMode ? " Public web research · sources linked" : " Synthetic sample data · Read-only"}
+        <span className="footer-credit-line">
+          © 2026 Querify. Designed & engineered by{" "}
+          <strong className="footer-credit-team">
+            Umar Imran, Nazish Saghir, and Zuryat Fatima
+          </strong>.
+        </span>
+        <span className="footer-data-note">
+          {webResearchMode ? <Search size={13} /> : <Database size={13} />}
+          {webResearchMode ? " Web research · citations linked" : " Synthetic SQL demo · read-only"}
         </span>
       </div>
     </footer>
@@ -902,7 +906,10 @@ export default function Home() {
         <div className="hero-actions">
           <button
             className="primary-button interactive-btn transition-all duration-200 ease-out hover:scale-[1.01] hover:-translate-y-0.5 hover:shadow-lg hover:shadow-cyan-500/10 active:scale-[0.98] cursor-pointer"
-            onClick={() => go("console")}
+            onClick={() => {
+              setWebResearchMode(true);
+              go("console");
+            }}
           >
             → &nbsp; Explore web research <ArrowRight size={15} />
           </button>
@@ -918,14 +925,14 @@ export default function Home() {
         </div>
         <div
           className="pipeline-card"
-          aria-label="Querify four-step workflow demo"
+          aria-label="How Querify performs live web research"
         >
           <div className="pipeline-top">
-            <span>querify-pipeline // SQL demo · synthetic rows</span>
+            <span>querify-research // Google Search grounding</span>
             <div
               className="pipeline-stepper"
               role="group"
-              aria-label="Choose workflow stage"
+              aria-label="Choose research stage"
             >
               {pipelineStages.map((stage, index) => (
                 <button
@@ -974,40 +981,41 @@ export default function Home() {
               <button
                 type="button"
                 onClick={() => {
-                  setQuery("Show me the best performing AI companies");
+                  setWebResearchMode(true);
+                  setQuery("What are recent advances in long-duration energy storage?");
                   setLastClarificationAnswer("");
                   go("console");
                 }}
               >
-                Run this question →
+                Run a live research question →
               </button>
             </div>
           </div>
         </div>
       </div>
       <div className="section-heading">
-        <span>EXECUTION FLOW</span>
+        <span>RESEARCH FLOW</span>
         <h2>How Querify Works</h2>
         <p>
-          Three deterministic steps from human inquiry to relational precision.
+          Three clear steps from an open question to cited evidence.
         </p>
       </div>
       <div className="flow-grid">
         {[
           {
             n: "01",
-            title: "Ask in English",
-            copy: "Type your analytical inquiry naturally. Querify parses semantic intent and grounds tokens against the database schema catalog.",
+            title: "Ask any topic",
+            copy: "Start with a question about any subject. Web Research is separate from the SQL demo and is not limited to its sample database.",
           },
           {
             n: "02",
-            title: "Clarify Ambiguity",
-            copy: "If multiple valid interpretations exist, execution halts. Choose between targeted business metrics via card options or arrow keys.",
+            title: "Search the public web",
+            copy: "Gemini uses Google Search grounding to find relevant pages from Google's public web index. Coverage depends on the pages available there.",
           },
           {
             n: "03",
-            title: "Get Verified SQL",
-            copy: "Receive AST-validated SELECT SQL, inspect formatted data rows with sticky headers, and visualize distributions.",
+            title: "Review linked sources",
+            copy: "Read a synthesized response with citations, then open the original pages to check the evidence for yourself.",
           },
         ].map(item => (
           <article className="feature-card" data-cursor-spotlight key={item.n}>
@@ -1018,11 +1026,11 @@ export default function Home() {
         ))}
       </div>
       <div className="section-heading product-surface-heading">
-        <span>PRODUCT SURFACE</span>
-        <h2>A working surface for the questions behind the dashboard.</h2>
+        <span>OPTIONAL SQL DEMO</span>
+        <h2>A separate, read-only SQL workspace.</h2>
         <p>
-          One deliberate path from intent to evidence — with the decision rule
-          visible at every step.
+          This workspace runs against clearly labeled synthetic rows and stays
+          separate from live Web Research.
         </p>
       </div>
       <div className="flow-grid four product-surface">
