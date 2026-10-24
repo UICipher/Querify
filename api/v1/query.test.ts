@@ -37,17 +37,24 @@ describe("Vercel query API", () => {
     expect(result.body.columns).toEqual(["company_name", "profit_millions"]);
   });
 
-  it("never returns company fixtures for the reported restaurant prompt", async () => {
-    const result = await postQuery({
-      query: "give me the best restaurants - revenue",
-      execute: true,
-    });
+  it.each([
+    "give me the best restaurants - revenue",
+    "show me the best houses - revenue",
+    "what is the revenue for phones",
+    "compare cars by profit",
+    "best hotels by revenue",
+    "show me the best dragons by revenue",
+  ])(
+    "never returns company fixtures for unsupported query: %s",
+    async query => {
+      const result = await postQuery({ query, execute: true });
 
-    expect(result.status).toBe(422);
-    expect(result.body.code).toBe("UNSUPPORTED_DEMO_SCOPE");
-    expect(result.body.error).toContain("does not contain restaurant data");
-    expect(result.body.rows).toBeUndefined();
-  });
+      expect(result.status).toBe(422);
+      expect(result.body.code).toBe("UNSUPPORTED_DEMO_SCOPE");
+      expect(result.body.error).toContain("no company rows were returned");
+      expect(result.body.rows).toBeUndefined();
+    }
+  );
 
   it("uses a selected clarification metric over conflicting query wording", async () => {
     const result = await postQuery({

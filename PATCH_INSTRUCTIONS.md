@@ -1,7 +1,11 @@
-# Querify blue-theme patch
+# Querify overlay patch
 
-This is a minimal patch for the already-updated UICipher/Querify repository. It contains only `client/src/index.css`, which removes the remaining purple accents from the logo/female badge, schema-studio icon, slider, Launch schema job button, hover/focus glows, and related controls.
+This is an overlay for the existing `UICipher/Querify` repository, not a replacement repository. Keep all existing files. Extract these paths into the existing repository root and overwrite only matching files; do not delete the repo or upload this archive as a nested folder.
 
-In the existing repository, replace **only** `client/src/index.css` with the file at this same path. Keep the other repository files; do not delete the repo or upload a nested `querify/` folder. Commit the change on `main`. If Vercel is connected to `main`, it should redeploy automatically. After deployment, hard-refresh or reopen the website.
+Files included:
+- `client/src/index.css` — removes the last purple-hued legacy fallbacks and keeps true-red destructive/error cues.
+- `shared/queryScope.ts` — blocks known unsupported domains and unfamiliar requested entities instead of returning company demo rows.
+- `shared/queryScope.test.ts` — regression tests for houses, phones, cars, restaurants, hotels, unknown nouns, and supported company queries.
+- `api/v1/query.test.ts` — verifies unsupported requests return 422 and no `rows` payload.
 
-The restaurant/hotel scope guard is already present in the current uploaded code; this patch only changes the visual palette.
+After replacing the files, run the project checks, commit the changes to `main`, and push. Vercel will deploy automatically only if this repository is connected to the project.
