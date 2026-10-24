@@ -52,6 +52,10 @@ The static local Vite preview does not host Vercel serverless functions. Use the
 - `git diff --check origin/main` — passed.
 - Browser preview confirmed the default Web Research screen, mode-specific header/data labels, separate SQL Demo behavior, and the grouped three-person 2026 credit.
 
+## Vercel Hobby function limit
+
+Vercel rejects Hobby deployments with more than 12 Serverless Functions ([function-count limit](https://vercel.link/function-count-limit)). Keep only the four route handlers in `api/`; shared modules, declarations, and tests belong under `server/querify-api/`. The UI contract test enforces this layout.
+
 A real outbound Gemini Search query was **not** made in this sandbox because no Vercel Gemini secret is available. The implementation and error paths are tested with mocked provider responses; perform one live test after the Vercel key is configured.
 
 ## Publication status

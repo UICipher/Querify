@@ -1,7 +1,7 @@
 import { Readable } from "node:stream";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import handler from "./query";
+import handler from "../../../api/v1/query";
 
 type Plan = Record<string, unknown>;
 let requestSequence = 0;

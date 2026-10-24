@@ -1,7 +1,7 @@
 import { Readable } from "node:stream";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import handler from "./research";
+import handler from "../../../api/v1/research";
 
 let sequence = 0;
 

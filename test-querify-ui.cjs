@@ -1,11 +1,30 @@
 const fs = require("node:fs");
 const home = fs.readFileSync("client/src/pages/Home.tsx", "utf8");
 const researchPanel = fs.readFileSync("client/src/components/WebResearchPanel.tsx", "utf8");
-const researchApi = fs.readFileSync("api/geminiSearch.ts", "utf8") + fs.readFileSync("api/v1/research.ts", "utf8");
+const researchApi = fs.readFileSync("server/querify-api/geminiSearch.ts", "utf8") + fs.readFileSync("api/v1/research.ts", "utf8");
 const css = fs.readFileSync("client/src/index.css", "utf8");
 const routes = JSON.parse(
   fs.readFileSync("client/public/manus-routes.json", "utf8")
 );
+function listApiCodeFiles(directory) {
+  return fs.readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
+    const filePath = `${directory}/${entry.name}`;
+    return entry.isDirectory()
+      ? listApiCodeFiles(filePath)
+      : /\.(?:[cm]?js|tsx?)$/.test(entry.name)
+        ? [filePath]
+        : [];
+  });
+}
+const apiCodeFiles = listApiCodeFiles("api").sort();
+const expectedApiCodeFiles = [
+  "api/health.ts",
+  "api/history.ts",
+  "api/v1/query.ts",
+  "api/v1/research.ts",
+];
+if (JSON.stringify(apiCodeFiles) !== JSON.stringify(expectedApiCodeFiles))
+  throw new Error("Keep Vercel route entrypoints only under api/; store helpers and tests under server/querify-api/");
 const main = fs.readFileSync("client/src/main.jsx", "utf8");
 const app = fs.readFileSync("client/src/App.jsx", "utf8");
 const html = fs.readFileSync("client/index.html", "utf8");

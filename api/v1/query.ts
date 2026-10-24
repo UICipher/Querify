@@ -6,24 +6,24 @@ import {
   RequestBodyTooLargeError,
   sendJson,
   validateReadOnlySelect,
-} from "../_lib.js";
+} from "../../server/querify-api/_lib.js";
 import {
   detectUnsupportedDemoScope,
   getSupportedDemoDomains,
   type SupportedDemoDomain,
 } from "../../shared/queryScope.js";
-import { executeDemoSql, SAMPLE_DATA_NOTICE } from "../demoDatabase.js";
+import { executeDemoSql, SAMPLE_DATA_NOTICE } from "../../server/querify-api/demoDatabase.js";
 import {
   compileQueryPlan,
   InvalidQueryPlanError,
   validateQueryPlan,
-} from "../queryPlan.js";
-import { buildRuleBasedPlan } from "../ruleBasedPlanner.js";
+} from "../../server/querify-api/queryPlan.js";
+import { buildRuleBasedPlan } from "../../server/querify-api/ruleBasedPlanner.js";
 import {
   LlmConfigurationError,
   LlmProviderError,
   requestQueryPlan,
-} from "../llmClient.js";
+} from "../../server/querify-api/llmClient.js";
 
 type QueryBody = {
   query?: string;

@@ -4,12 +4,12 @@ import {
   readJson,
   RequestBodyTooLargeError,
   sendJson,
-} from "../_lib.js";
+} from "../../server/querify-api/_lib.js";
 import {
   GeminiResearchConfigurationError,
   GeminiResearchProviderError,
   requestGeminiResearch,
-} from "../geminiSearch.js";
+} from "../../server/querify-api/geminiSearch.js";
 
 type ResearchBody = { query?: string };
 const RATE_WINDOW_MS = 60_000;

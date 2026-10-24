@@ -1,5 +1,5 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
-import { handleOptions, sendJson } from "./_lib.js";
+import { handleOptions, sendJson } from "../server/querify-api/_lib.js";
 
 export default function handler(req: IncomingMessage, res: ServerResponse) {
   if (handleOptions(req, res)) return;

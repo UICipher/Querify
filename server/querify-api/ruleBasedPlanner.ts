@@ -1,7 +1,7 @@
 import {
   getSupportedDemoDomains,
   type SupportedDemoDomain,
-} from "../shared/queryScope.js";
+} from "../../shared/queryScope.js";
 import { DEMO_TABLES, type DemoTableName } from "./demoDatabase.js";
 import type { QueryPlan } from "./queryPlan.js";
 
