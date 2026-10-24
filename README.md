@@ -1,36 +1,33 @@
-# 🔍 Querify (QueryFile)
-### Text-to-SQL with an Intelligent Clarification Engine
+# Querify
 
-**Querify** is a production-oriented enterprise backend built with **Spring Boot 3** and **Java 21** that bridges the gap between natural language and database execution. Instead of blindly guessing ambiguous queries, Querify triggers an intelligent clarification workflow, validates SQL with strict security controls, and returns frontend-ready results complete with business insights and visualization hints.
+Querify is an enterprise Text-to-SQL workspace with an Intelligent Clarification Engine. It turns business intent into governed, explainable SQL without making users learn a query language.
 
----
+## What is included
 
-## 🚀 Core Features
+The `client/` application is a responsive Vite + React workspace with a dark slate operations-desk aesthetic. It provides natural-language query composition, multi-turn clarification, generated SQL formatting, interactive result/table/chart views, business insight copy, query metadata, and developer attribution. The preview ships with a deterministic demo adapter so the interaction is complete even when the Java service is offline; replace `buildDemoResponse` in `client/src/pages/Home.tsx` with a fetch to the documented API when wiring the live service.
 
-1. **Intelligent Clarification Engine:** Detects underspecified or ambiguous user prompts (e.g., "Show sales") and interactively asks clarifying follow-up questions with structured options before generating SQL.
-2. **Multi-Turn Context Preservation:** Retains conversation state and intent across multiple request turns.
-3. **Bulletproof SQL Security Guard:** Uncompromising security checks that strictly allow only single `SELECT` statements, instantly blocking semicolons, comments, and any write/destructive operations (`DROP`, `DELETE`, `UPDATE`, `INSERT`).
-4. **Read-Only Enterprise Execution:** Configured via HikariCP with strict read-only connections, auto-appended row limits, and query timeouts.
-5. **Rich Analytics Payload:** Returns raw rows along with auto-generated plain-English business summaries (`businessInsight`) and chart visualization metadata (`chartHint`).
+The `text-to-sql-backend/` service is a Java 21 / Spring Boot API. Its `POST /api/v1/query` contract returns `clarification_needed` with an opaque conversation id and clickable options for underspecified intent, then returns `success` with `resolvedQuery`, validated `sql`, `columns`, raw `rows`, `businessInsight`, and `chartHint`. `GET /api/v1/schema` exposes safe schema metadata.
 
----
+## Security boundary
 
-## 🛠️ Tech Stack
+`SqlSecurityGuard` accepts only one SELECT statement. Semicolons, SQL comments, stacked queries, mutation/admin keywords, and SELECT INTO are rejected. Unsafe SQL is surfaced as HTTP 422. The JDBC data source is configured read-only, row counts are capped, and each prepared statement receives a query timeout.
 
-* **Backend:** Java 21, Spring Boot 3, Spring JDBC / JPA
-* **Database:** H2 / SQLite / PostgreSQL (Configurable)
-* **Architecture:** RESTful API with Global Exception Handling
+## Run locally
 
----
+```bash
+pnpm install --frozen-lockfile
+pnpm run dev:static
+```
 
-## ⚙️ Getting Started
+The frontend preview listens on port 3000. For the backend:
 
-### Prerequisites
-* Java 21 installed
-* Maven 3.9+ installed
+```bash
+cd text-to-sql-backend
+mvn spring-boot:run
+```
 
-### Running Locally
-1. Clone the repository:
-   ```bash
-   git clone [https://github.com/UICipher/querify.git](https://github.com/UICipher/querify.git)
-   cd querify
+The included checks are `pnpm exec tsx test-querify-ui.cjs`, `pnpm run check`, `pnpm run build:static`, and `mvn test` from `text-to-sql-backend/`.
+
+## Attribution
+
+Designed and built by Muhammad Umar Imran. Contact: umerimran1882@gmail.com.
