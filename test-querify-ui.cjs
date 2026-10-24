@@ -36,9 +36,15 @@ for (const token of [
   "All Available Demo Data",
   "Export CSV",
   "Security & Auth",
-  "Structured query mode",
-  "RULE-BASED",
-  "NOT REQUIRED",
+  "Query planner",
+  "SHOWN PER RESULT",
+  "OPTIONAL",
+  "Model used for SQL planning",
+  "Built-in rules · no model call",
+  "Synthetic sample data",
+  "Surprise me",
+  "Focus mode",
+  "plannerMode",
   "Run an example query",
   "SQLite · Read-only sample",
   "engineering-team-grid",
@@ -51,6 +57,12 @@ for (const token of [
   ".engineering-team-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr))",
   ".person-badge.female",
   ".person-badge.male",
+  "DM Serif Display",
+  "Manrope",
+  "IBM Plex Mono",
+  ".console-page.focus-mode",
+  ".surprise-button:hover:not(:disabled)",
+  ".planner-pill.ai_model",
 ]) {
   if (!css.includes(token))
     throw new Error(`Missing theme/layout contract token: ${token}`);
@@ -60,6 +72,8 @@ for (const staleLabel of [
   "SQL AI",
   "AI Engine",
   "All Systems Operational",
+  "SYNTHESIZED SQL",
+  "RULE-BASED",
 ]) {
   if (home.includes(staleLabel))
     throw new Error(`Misleading AI-styled placeholder remains: ${staleLabel}`);
@@ -74,6 +88,8 @@ for (const name of [
 }
 if (!home.includes("umerimran1882@gmail.com"))
   throw new Error("Missing exact contact email");
+if (!home.includes("© 2026 Querify. Designed & engineered by Umar Imran, Nazish Saghir,"))
+  throw new Error("Copyright byline must list Umar first without changing the team cards");
 if (home.includes("Product lead") || home.includes("product-owner"))
   throw new Error("Owner attribution must not be present");
 for (const profile of [

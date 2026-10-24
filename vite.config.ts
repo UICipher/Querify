@@ -191,6 +191,13 @@ export default defineConfig({
   build: {
     outDir: path.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: true,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes("node_modules/recharts/")) return "charts";
+        },
+      },
+    },
   },
   server: {
     host: true,

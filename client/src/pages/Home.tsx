@@ -48,6 +48,7 @@ import {
   Search,
   Server,
   ShieldCheck,
+  Shuffle,
   Table2,
   Trash2,
   X,
@@ -70,6 +71,7 @@ type Result = {
   title: string;
   duration: number;
   dataNotice?: string;
+  plannerMode?: "local_rules" | "ai_model" | "demo_preview" | "unknown";
 } & AnalyticsContract;
 type ServerClarification = {
   question: string;
@@ -175,6 +177,14 @@ const periodOptions = [
     value: "all_time",
   },
 ];
+const surpriseQueries = [
+  "Show restaurants in Seattle rated above 4.5",
+  "Compare average hotel nightly rates by city",
+  "Find three-bedroom homes under $600,000",
+  "Rank cars by estimated range in miles",
+  "Show phones with the highest camera resolution",
+  "Rank companies by revenue growth",
+];
 
 const pipelineStages = [
   {
@@ -265,6 +275,7 @@ export default function Home() {
   );
   const [selectedSampleTable, setSelectedSampleTable] = useState("companies");
   const [mobileNav, setMobileNav] = useState(false);
+  const [focusMode, setFocusMode] = useState(false);
   const [copied, setCopied] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [toast, setToast] = useState("");
@@ -334,7 +345,8 @@ export default function Home() {
     setResult({
       ...next,
       dataNotice:
-        "Local preview uses illustrative company fixtures. The deployed query service supports all six sample domains without an API key.",
+        "Local preview uses preloaded illustrative company rows. This preview does not call a model or the live query endpoint.",
+      plannerMode: "demo_preview",
     });
     setResultSearch("");
     setResultTab("sql");
@@ -387,6 +399,7 @@ export default function Home() {
       dataNotice:
         response.dataNotice ??
         "Illustrative synthetic sample data only — not live listings or market data.",
+      plannerMode: response.plannerMode ?? "unknown",
       chartHint: { chartType, title },
     };
     setResult(next);
@@ -825,8 +838,8 @@ export default function Home() {
         </div>
       </div>
       <div className="footer-bottom">
-        © 2026 Querify. Designed & engineered by Nazish Saghir, Zuryat Fatima,
-        and Umar Imran.{" "}
+        © 2026 Querify. Designed & engineered by Umar Imran, Nazish Saghir,
+        and Zuryat Fatima.{" "}
         <span>
           <Database size={13} /> Synthetic sample data · Read-only
         </span>
@@ -847,9 +860,9 @@ export default function Home() {
           <em>Get the right SQL.</em>
         </h1>
         <p>
-          Turn an imprecise question into a decision-ready answer. Querify
-          pauses at the business rule, keeps the conversation intact, and
-          returns SQL your team can inspect before it runs.
+          Turn a plain-language question into SQL you can inspect. Querify works
+          with six illustrative datasets—not live business data—and shows
+          whether each plan came from a model or built-in rules.
         </p>
         <div className="hero-actions">
           <button
@@ -1009,18 +1022,29 @@ export default function Home() {
   );
 
   const Console = () => (
-    <section className="page console-page">
+    <section className={`page console-page ${focusMode ? "focus-mode" : ""}`}>
       <div className="page-heading">
         <div>
           <span>› STRUCTURED QUERY WORKSPACE</span>
           <h2>From question to verified SQL.</h2>
           <p>
-            Ask plain-language questions over six sample datasets. Common
-            queries use built-in rules; no API key is required.
+            Results use synthetic sample tables, never a live database. A
+            configured model may draft the SQL; otherwise built-in rules handle
+            supported questions. Querify labels the actual planner on each result.
           </p>
         </div>
-        <div className="guard-pill">
-          <ShieldCheck size={14} /> Read-only SQL Guard
+        <div className="page-heading-actions">
+          <div className="guard-pill">
+            <ShieldCheck size={14} /> Read-only SQL Guard
+          </div>
+          <button
+            className={`focus-mode-toggle ${focusMode ? "active" : ""}`}
+            type="button"
+            aria-pressed={focusMode}
+            onClick={() => setFocusMode(current => !current)}
+          >
+            {focusMode ? "Exit focus" : "Focus mode"}
+          </button>
         </div>
       </div>
       <div className="console-card" data-cursor-spotlight>
@@ -1138,7 +1162,25 @@ export default function Home() {
             </div>
           </div>
           <div>
-            <span className="group-label">✣ Ready-to-run questions:</span>
+            <div className="prompt-heading">
+              <span className="group-label">Ready-to-run questions</span>
+              <button
+                className="surprise-button"
+                type="button"
+                disabled={isExecuting}
+                onClick={() => {
+                  const sample = surpriseQueries[Math.floor(Math.random() * surpriseQueries.length)];
+                  setQuery(sample);
+                  setResult(null);
+                  setLastClarificationAnswer("");
+                  setApiError("");
+                  setShowRecoveryPrompts(false);
+                  void submitQuery(sample);
+                }}
+              >
+                <Shuffle size={12} /> Surprise me
+              </button>
+            </div>
             <div className="chip-row">
               {[
                 "Show the five most profitable companies",
@@ -1194,19 +1236,19 @@ export default function Home() {
       <aside className="studio-sidebar">
         <div className="studio-card query-mode-card" data-cursor-spotlight>
           <h3>
-            <Table2 size={15} /> Structured query mode
+            <Table2 size={15} /> Query planner
           </h3>
           <p>
-            Common questions use built-in rules and run only against the six
-            included sample tables.
+            A configured model can plan the SQL. If no model is available,
+            built-in rules handle supported prompts. Each result says which path ran.
           </p>
           <div className="guardrail-row">
-            <span>Query planner</span>
-            <b>RULE-BASED</b>
+            <span>Planner status</span>
+            <b>SHOWN PER RESULT</b>
           </div>
           <div className="guardrail-row">
-            <span>API key</span>
-            <b>NOT REQUIRED</b>
+            <span>Model provider</span>
+            <b>OPTIONAL</b>
           </div>
           <div className="guardrail-row">
             <span>Data</span>
@@ -1395,11 +1437,11 @@ export default function Home() {
           <div className="ready-icon">
             <Database size={22} />
           </div>
-          <h3>Ready to Translate Analytical Inquiries</h3>
+          <h3>Try a question, then check what ran.</h3>
           <p>
-            Click one of the sample prompt chips above or type a natural
-            language inquiry. If your question contains ambiguity, Querify will
-            ask for clarification before querying the database.
+            Use a sample prompt or press Surprise me. Every result shows whether
+            a model or the built-in rules planned the query, and the rows remain
+            clearly marked as synthetic demo data.
           </p>
         </div>
       )}
@@ -1412,7 +1454,7 @@ export default function Home() {
     return (
       <div className="result-panel" data-cursor-spotlight>
         <div className="result-top">
-          <span>› SYNTHESIZED SQL</span>
+          <span>› QUERY PLAN</span>
           <div>
             <span className="verified-badge">
               <ShieldCheck size={13} /> Read-only verified
@@ -1435,11 +1477,24 @@ export default function Home() {
         <div className="logic-line">
           <b>Logic:</b> {current.logic}
         </div>
-        {current.dataNotice && (
-          <div className="data-provenance" role="note">
-            <ShieldCheck size={14} /> {current.dataNotice}
+        <div className="result-provenance" role="note">
+          <div className="provenance-tags">
+            <span className={`planner-pill ${current.plannerMode ?? "unknown"}`}>
+              <span className="provenance-dot" />
+              {current.plannerMode === "ai_model"
+                ? "Model used for SQL planning"
+                : current.plannerMode === "local_rules"
+                  ? "Built-in rules · no model call"
+                  : current.plannerMode === "demo_preview"
+                    ? "Local preview · no model call"
+                    : "Planner mode not reported"}
+            </span>
+            <span className="data-pill">
+              <Database size={12} /> Synthetic sample data
+            </span>
           </div>
-        )}
+          <p>{current.dataNotice ?? "These are illustrative rows, not live business data."}</p>
+        </div>
         {current.rows.length === 0 && (
           <div className="empty-result-recovery" role="status">
             <div>
