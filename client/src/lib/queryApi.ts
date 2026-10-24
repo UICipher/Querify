@@ -17,9 +17,15 @@ type QueryRuntime = { queryApiUrl?: string };
 type QueryWindow = Window & { __MANUS_CONFIG__?: QueryRuntime };
 
 export function queryApiUrl(): string {
-  const runtimeUrl = (window as QueryWindow).__MANUS_CONFIG__?.queryApiUrl?.trim();
+  const runtimeUrl = (
+    window as QueryWindow
+  ).__MANUS_CONFIG__?.queryApiUrl?.trim();
   const buildUrl = import.meta.env.VITE_QUERY_API_URL?.trim();
-  return runtimeUrl || buildUrl || window.location.origin;
+  return (
+    runtimeUrl ||
+    buildUrl ||
+    (import.meta.env.PROD ? window.location.origin : "")
+  );
 }
 
 export async function executeLiveQuery(payload: {
@@ -31,7 +37,9 @@ export async function executeLiveQuery(payload: {
   const base = queryApiUrl();
   if (!base) throw new Error("LIVE_API_NOT_CONFIGURED");
 
-  const endpoint = base.endsWith("/api/v1/query") ? base : `${base.replace(/\/$/, "")}/api/v1/query`;
+  const endpoint = base.endsWith("/api/v1/query")
+    ? base
+    : `${base.replace(/\/$/, "")}/api/v1/query`;
   const response = await fetch(endpoint, {
     method: "POST",
     headers: { "Content-Type": "application/json", Accept: "application/json" },
@@ -40,8 +48,13 @@ export async function executeLiveQuery(payload: {
 
   const body = await response.json().catch(() => ({}));
   if (!response.ok) {
-    const error = new Error(body?.message || body?.error || `Query request failed (${response.status})`) as Error & { status?: number };
+    const error = new Error(
+      body?.message ||
+        body?.error ||
+        `Query request failed (${response.status})`
+    ) as Error & { status?: number; code?: string };
     error.status = response.status;
+    error.code = body?.code;
     throw error;
   }
   return body as LiveQueryResponse;

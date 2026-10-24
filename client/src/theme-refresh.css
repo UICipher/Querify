@@ -443,14 +443,14 @@ textarea:focus-visible,
   }
 }
 .hero-actions > .primary-button {
-  border-color: #cbb4ff !important;
-  background: linear-gradient(135deg, #7043e6, #925cf4 68%, #ad78ff) !important;
+  border-color: #a9d2ff !important;
+  background: linear-gradient(135deg, #2367e8, #4c8dff 56%, #26b9d4) !important;
   box-shadow:
-    0 10px 28px #7544e34a,
+    0 10px 28px #286fed54,
     0 1px 0 #ffffff35 inset !important;
 }
 .hero-actions > .primary-button:hover {
-  border-color: #e0d2ff !important;
-  background: linear-gradient(135deg, #8057ef, #a16dff 68%, #ba8bff) !important;
-  box-shadow: 0 12px 32px #7544e366 !important;
+  border-color: #bae6fd !important;
+  background: linear-gradient(135deg, #1e56d4, #3978ef 56%, #16a6c9) !important;
+  box-shadow: 0 12px 32px #286fed70 !important;
 }

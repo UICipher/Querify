@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { detectUnsupportedDemoScope } from "@shared/queryScope";
 import {
   executeLiveQuery,
   queryApiUrl,
@@ -307,18 +308,13 @@ const ambiguousOptions = [
 ];
 const periodOptions = [
   {
-    label: "This Month",
-    detail: "Use the current calendar month",
-    value: "this_month",
+    label: "Fiscal Year 2024",
+    detail: "Use the available annual FY 2024 demo fixtures",
+    value: "fiscal_year_2024",
   },
   {
-    label: "Last Month",
-    detail: "Compare against the previous calendar month",
-    value: "last_month",
-  },
-  {
-    label: "All Time",
-    detail: "Use the complete available reporting history",
+    label: "All Available Demo Data",
+    detail: "Use the complete illustrative fixture set currently available",
     value: "all_time",
   },
 ];
@@ -570,6 +566,14 @@ export default function Home() {
       ]);
       return;
     }
+    const scopeIssue = detectUnsupportedDemoScope(query);
+    if (scopeIssue) {
+      setApiError(scopeIssue.message);
+      setClarifying(false);
+      setConversationId("");
+      setResult(null);
+      return;
+    }
     if (queryApiUrl()) {
       setIsExecuting(true);
       try {
@@ -582,8 +586,13 @@ export default function Home() {
           query
         );
       } catch (error) {
-        const status = (error as Error & { status?: number }).status;
-        if (status === 422) {
+        const apiError = error as Error & { status?: number; code?: string };
+        if (apiError.code === "UNSUPPORTED_DEMO_SCOPE") {
+          setApiError(apiError.message);
+          setClarifying(false);
+          setConversationId("");
+          setResult(null);
+        } else if (apiError.status === 422) {
           const message = `Query blocked (HTTP 422): ${(error as Error).message}`;
           setApiError(message);
           setHistory(entries => [
@@ -659,10 +668,10 @@ export default function Home() {
     void submitClarification(metric, metric, `${query} · ${metric}`);
   };
   const choosePeriod = (period: string) => {
-    if (!queryApiUrl() && period !== "all_time") {
+    if (period !== "fiscal_year_2024" && period !== "all_time") {
       setClarifying(false);
       setApiError(
-        "Demo Mode contains annual FY 2024 fixtures only. Connect a live data source for monthly reporting windows."
+        "Demo Mode supports annual FY 2024 fixtures and all available demo rows only. Monthly reporting requires a live data source."
       );
       return;
     }
