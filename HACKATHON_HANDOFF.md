@@ -16,11 +16,14 @@ The supplied CraftSolve Hackathon 2026 judging image was used as a presentation 
 
 - Reconstructed the original product surface inside the managed React application instead of keeping the earlier sparse replacement page.
 - Restored the signature calligraphy `Q`, indigo/purple/cyan gradient identity, glass blur panels, glow, database selector, Security & Auth control, and right-side studio cards.
-- Added a real two-column Query Console workspace with Model Fine-Tuning Studio, SqlSecurityGuard status, and Workspace Source panels.
+- Replaced the nonfunctional model-tuning mock controls with a truthful Structured Query Mode card, a working sample-query action, SqlSecurityGuard status, and Workspace Source panels.
+- Reframed the console and architecture copy around query clarity, safe SQL, and sample data rather than AI claims or model-tuning marketing.
+- Rebalanced the Engineering Team footer into three equal-width desktop cards, with the requested restrained rose accents for female members and blue accents for the male member; the row stacks cleanly on narrow screens.
 - Added a multi-turn revenue-report clarification flow with This Month, Last Month, and All Time options.
-- Added a no-key structured query path for the six existing sample domains. It uses deterministic rules by default, keeps the external model optional, asks when a domain or company-performance metric is ambiguous, and does not substitute unrelated rows.
+- Added a key-free structured query path for the six existing sample domains. It uses deterministic rules when no provider is configured or an optional provider is unavailable, asks when a domain or company-performance metric is ambiguous, and does not substitute unrelated rows.
 - Added supported-query suggestions for out-of-scope requests and a one-click broadening action for zero-row results.
 - Extended the existing pointer spotlight to feature, schema, and audit cards, and added restrained result-row hover feedback in the same cyan/slate palette.
+- Added a soft pointer-follow highlight and hover lift to sample-domain cards, plus a readable row hover state for result tables.
 - Added the analytics payload surface: business insight, chart hint, raw rows/columns, table view, chart projection, CSV export, and audit records.
 - Replaced the generic-feeling font stack with A tight system sans stack for UI, a restrained Georgia/serif mark, and the platform monospace stack for technical labels and SQL.
 - Added tactile click states, hover lift, glow, shine sweeps, staggered entrance motion, voice-listening pulse, keyboard-visible focus, and reduced-motion support. The final type stack is Karla, Fraunces, and IBM Plex Mono.

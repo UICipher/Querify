@@ -306,7 +306,7 @@ export function buildRuleBasedPlan(
     limit: parseLimit(text),
     title,
     insight:
-      "Structured local interpretation ran against the illustrative sample tables. No external model or API key was used.",
+      "Structured rules interpreted the question against the illustrative sample tables using the selected filters.",
     chartType: "bar",
   };
 }

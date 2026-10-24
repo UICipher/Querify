@@ -16,7 +16,7 @@ Keep all three settings in Vercel’s server-side environment configuration. `QU
 
 After deployment, use a sample prompt such as **“Show restaurants in Seattle rated above 4.5”** or click a domain prompt in Querify. The result should show generated SQL, matching rows, and a notice that the records are synthetic. The tables cover companies, restaurants, hotels, homes, cars, and phones; they are examples, not live listings, prices, or market data. A question naming multiple domains asks you to choose one; the API will not execute a plan against a different table than the one selected.
 
-If the key or model ID is missing, the API uses no-key structured mode and returns a provenance notice; it does not quietly substitute company fixtures for another domain. If a configured provider fails, the error is surfaced rather than silently switching planners. A supported-domain query that matches no sample records returns an empty result and a recovery action rather than unrelated rows.
+If the key or model ID is missing, the API uses no-key structured mode and returns a provenance notice; it does not quietly substitute company fixtures for another domain. If a configured provider is unavailable, supported questions fall back to structured rules and the response notice says so. Invalid query plans are still rejected. A supported-domain query that matches no sample records returns an empty result and a recovery action rather than unrelated rows.
 
 ## Cost and access note
 

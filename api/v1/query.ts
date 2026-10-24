@@ -167,12 +167,19 @@ export default async function handler(
 
   const startedAt = Date.now();
   let usedLocalPlanner = false;
+  let localFallbackReason: "provider_not_configured" | "provider_unavailable" | null = null;
   try {
     let rawPlan: unknown;
     try {
       rawPlan = await requestQueryPlan(query, clarificationAnswer || undefined);
     } catch (error) {
-      if (!(error instanceof LlmConfigurationError)) throw error;
+      if (error instanceof LlmConfigurationError) {
+        localFallbackReason = "provider_not_configured";
+      } else if (error instanceof LlmProviderError) {
+        localFallbackReason = "provider_unavailable";
+      } else {
+        throw error;
+      }
       usedLocalPlanner = true;
       rawPlan = buildRuleBasedPlan(
         query,
@@ -196,7 +203,7 @@ export default async function handler(
     ) {
       return sendJson(res, 502, {
         code: "AI_DOMAIN_MISMATCH",
-        error: `The model selected ${DOMAIN_LABELS[plan.table]}, but the question targets ${DOMAIN_LABELS[requestedDomain]}. No rows were returned; rephrase the question or choose a domain explicitly.`,
+        error: `The query plan selected ${DOMAIN_LABELS[plan.table]}, but the question targets ${DOMAIN_LABELS[requestedDomain]}. No rows were returned; rephrase the question or choose a domain explicitly.`,
       });
     }
 
@@ -233,7 +240,7 @@ export default async function handler(
         : `No sample records in ${plan.table} matched the requested filters.`,
       chartHint: { chartType: plan.chartType, title: plan.title },
       dataNotice: usedLocalPlanner
-        ? `No-key structured mode: rule-based interpretation. ${SAMPLE_DATA_NOTICE}`
+        ? `${localFallbackReason === "provider_unavailable" ? "Structured rules fallback: optional provider unavailable." : "Structured rules mode: no provider key is required."} ${SAMPLE_DATA_NOTICE}`
         : SAMPLE_DATA_NOTICE,
       plannerMode: usedLocalPlanner ? "local_rules" : "ai_model",
       executionTimeMs: Math.max(1, Date.now() - startedAt),
@@ -248,7 +255,7 @@ export default async function handler(
     if (error instanceof InvalidQueryPlanError) {
       return sendJson(res, 502, {
         code: "AI_INVALID_PLAN",
-        error: "The model returned a query outside the safe sample schema. Rephrase the question and try again.",
+        error: "The query plan did not match the safe sample schema. Rephrase the question and try again.",
       });
     }
     return sendJson(res, 500, {

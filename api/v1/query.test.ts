@@ -226,7 +226,7 @@ describe("Vercel AI-backed query API", () => {
     expect(result.body.rows).toBeUndefined();
   });
 
-  it("returns a sanitized provider error when the configured model endpoint fails", async () => {
+  it("uses structured rules when the configured provider fails", async () => {
     vi.stubEnv("QUERIFY_LLM_API_KEY", "test-server-secret");
     vi.stubEnv("QUERIFY_LLM_MODEL", "test-model");
     vi.stubEnv("QUERIFY_LLM_BASE_URL", "https://api.example.test/v1");
@@ -234,12 +234,18 @@ describe("Vercel AI-backed query API", () => {
       "fetch",
       vi.fn(async () => new Response("private provider diagnostic", { status: 500 }))
     );
-    const result = await postQuery({ query: "Show restaurants by rating" });
+    const result = await postQuery({
+      query: "Show restaurants in Seattle rated above 4.5",
+    });
 
-    expect(result.status).toBe(502);
-    expect(result.body.code).toBe("AI_PROVIDER_ERROR");
-    expect(result.body.error).not.toContain("private provider diagnostic");
-    expect(result.body.error).not.toContain("test-server-secret");
+    expect(result.status).toBe(200);
+    expect(result.body.plannerMode).toBe("local_rules");
+    expect(result.body.dataNotice).toContain("Structured rules fallback");
+    expect(result.body.rows).toEqual([
+      { name: "Harbor & Herb", city: "Seattle", rating: 4.8 },
+    ]);
+    expect(result.body.dataNotice).not.toContain("private provider diagnostic");
+    expect(result.body.dataNotice).not.toContain("test-server-secret");
   });
 
   it("supports safe grouped aggregates", async () => {
@@ -283,7 +289,7 @@ describe("Vercel AI-backed query API", () => {
     expect(result.body.rows).toEqual([
       { name: "Harbor & Herb", city: "Seattle", rating: 4.8 },
     ]);
-    expect(result.body.dataNotice).toContain("No-key structured mode");
+    expect(result.body.dataNotice).toContain("Structured rules mode");
     expect(result.body.plannerMode).toBe("local_rules");
     expect(fetchMock).not.toHaveBeenCalled();
   });

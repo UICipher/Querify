@@ -36,12 +36,33 @@ for (const token of [
   "All Available Demo Data",
   "Export CSV",
   "Security & Auth",
-  "Model Fine-Tuning Studio",
+  "Structured query mode",
+  "RULE-BASED",
+  "NOT REQUIRED",
+  "Run an example query",
+  "SQLite · Read-only sample",
+  "engineering-team-grid",
   "SqlSecurityGuard",
-  "PostgreSQL 15",
 ]) {
   if (!home.includes(token))
     throw new Error(`Missing UI contract token: ${token}`);
+}
+for (const token of [
+  ".engineering-team-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr))",
+  ".person-badge.female",
+  ".person-badge.male",
+]) {
+  if (!css.includes(token))
+    throw new Error(`Missing theme/layout contract token: ${token}`);
+}
+for (const staleLabel of [
+  "Model Fine-Tuning Studio",
+  "SQL AI",
+  "AI Engine",
+  "All Systems Operational",
+]) {
+  if (home.includes(staleLabel))
+    throw new Error(`Misleading AI-styled placeholder remains: ${staleLabel}`);
 }
 for (const name of [
   "Nazish Saghir",

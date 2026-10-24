@@ -48,7 +48,6 @@ import {
   Search,
   Server,
   ShieldCheck,
-  Sparkles,
   Table2,
   Trash2,
   X,
@@ -242,10 +241,10 @@ export default function Home() {
     },
     {
       status: "SUCCESS",
-      question: "Show the top AI models by benchmark evaluation score",
-      sql: "SELECT m.model_name, c.company_name, m.model_category, m.performance_score FROM ai_models m JOIN companies c ON m.company_id = c.company_id ORDER BY m.performance_score DESC LIMIT 10;",
+      question: "Show phones with the highest camera resolution",
+      sql: "SELECT brand, model, camera_mp FROM phones ORDER BY camera_mp DESC LIMIT 10;",
       duration: 12,
-      rows: 10,
+      rows: 8,
       time: "10/23/2026, 7:07:27 PM",
     },
     {
@@ -335,7 +334,7 @@ export default function Home() {
     setResult({
       ...next,
       dataNotice:
-        "Local preview uses illustrative company fixtures. Deployed multi-domain queries use the server-side AI API.",
+        "Local preview uses illustrative company fixtures. The deployed query service supports all six sample domains without an API key.",
     });
     setResultSearch("");
     setResultTab("sql");
@@ -514,8 +513,8 @@ export default function Home() {
           setClarifying(false);
           setApiError(
             apiError.code === "AI_NOT_CONFIGURED"
-              ? apiError.message
-              : `Live AI query failed: ${apiError.message}. No fixture fallback was used.`
+              ? "This deployment has not received the key-free query update yet. No rows were returned."
+              : `The query service failed: ${apiError.message}. No rows were returned. Try a sample question.`
           );
         }
       } finally {
@@ -528,7 +527,7 @@ export default function Home() {
       setResult(null);
       setClarifying(false);
       setApiError(
-        "This local preview can run only its company fixture. Choose one sample domain at a time and use the deployed AI API for restaurants, hotels, homes, cars, or phones. No rows were returned."
+        "This static preview contains only the company fixture. Use the deployed Querify query service for restaurants, hotels, homes, cars, or phones. No rows were returned."
       );
       return;
     }
@@ -537,7 +536,7 @@ export default function Home() {
       setResult(null);
       setClarifying(false);
       setApiError(
-        `The ${localDomain} sample table is available through the deployed server-side AI API. This local preview does not substitute company rows for it; configure the Vercel model settings to run the query.`
+        `The static preview does not host the ${localDomain} sample table. Open the deployed Querify query service; no API key is required there. This preview will not substitute company rows.`
       );
       return;
     }
@@ -701,7 +700,7 @@ export default function Home() {
         <span className="brand-mark calligraphy-q">Q</span>
         <span>
           <b>Querify</b>
-          <small>SQL AI</small>
+          <small>SQL WORKSPACE</small>
         </span>
       </button>
       <nav className={`main-nav ${mobileNav ? "open" : ""}`}>
@@ -729,10 +728,8 @@ export default function Home() {
         ))}
       </nav>
       <div className="header-actions">
-        <select className="db-selector" aria-label="Database connection">
-          <option>PostgreSQL 15 · Enterprise</option>
-          <option>MySQL 8 · Analytics</option>
-          <option>SQLite · Local demo</option>
+        <select className="db-selector" aria-label="Current demo database" disabled>
+          <option>SQLite · Read-only sample</option>
         </select>
         <button
           className="auth-button"
@@ -768,18 +765,18 @@ export default function Home() {
           <span className="brand-mark calligraphy-q">Q</span>
           <span>
             <b>Querify</b>
-            <small>SQL AI</small>
+            <small>SQL WORKSPACE</small>
           </span>
         </div>
         <p>
           Ask in English. Get the right SQL.
           <br />
-          An intelligent natural-language-to-SQL platform engineered with Spring
-          Boot 3, AST verification, and proactive multi-turn clarification.
+          A structured query workspace for validated read-only SQL, sample data,
+          and clear clarification when a question needs more detail.
         </p>
         <div className="footer-proof">
-          <ShieldCheck size={14} /> AST Read-Only Enforced <span>•</span> MySQL
-          8 Relational
+          <ShieldCheck size={14} /> Read-only query guard <span>•</span> 6
+          synthetic tables
         </div>
       </div>
       <div>
@@ -792,34 +789,37 @@ export default function Home() {
           </button>
         ))}
       </div>
-      <div>
+      <div className="engineering-team-section">
         <h4>Engineering Team</h4>
-        {team.map(member => (
-          <div className="team-member" key={member.name}>
-            <strong>
-              <span
-                className={`person-badge ${member.gender}`}
-                title={member.attribution ?? `${member.gender} team member`}
-              >
-                {member.gender === "female" ? "♀" : "♂"}
+        <div className="engineering-team-grid">
+          {team.map(member => (
+            <article className={`team-member ${member.gender}`} key={member.name}>
+              <strong>
+                <span
+                  className={`person-badge ${member.gender}`}
+                  aria-label={member.gender === "female" ? "Female team member" : "Male team member"}
+                  title={member.attribution ?? `${member.gender} team member`}
+                >
+                  {member.gender === "female" ? "♀" : "♂"}
+                </span>
+                {member.name}
+              </strong>
+              {member.attribution && (
+                <span className="team-attribution">{member.attribution}</span>
+              )}
+              <a href={`mailto:${member.email}`}>{member.email}</a>
+              <span className="profile-links">
+                <a href={member.github} target="_blank" rel="noreferrer">
+                  <Github size={11} /> GitHub
+                </a>
+                <a href={member.linkedin} target="_blank" rel="noreferrer">
+                  <Linkedin size={11} /> LinkedIn
+                </a>
               </span>
-              {member.name}
-            </strong>
-            {member.attribution && (
-              <span className="team-attribution">{member.attribution}</span>
-            )}
-            <a href={`mailto:${member.email}`}>{member.email}</a>
-            <span className="profile-links">
-              <a href={member.github} target="_blank" rel="noreferrer">
-                <Github size={11} /> GitHub
-              </a>
-              <a href={member.linkedin} target="_blank" rel="noreferrer">
-                <Linkedin size={11} /> LinkedIn
-              </a>
-            </span>
-          </div>
-        ))}
-        <div className="team-member footer-contact">
+            </article>
+          ))}
+        </div>
+        <div className="team-contact-line">
           <strong>Project contact</strong>
           <a href="mailto:umerimran1882@gmail.com">umerimran1882@gmail.com</a>
         </div>
@@ -828,7 +828,7 @@ export default function Home() {
         © 2026 Querify. Designed & engineered by Nazish Saghir, Zuryat Fatima,
         and Umar Imran.{" "}
         <span>
-          <Activity size={13} /> All Systems Operational
+          <Database size={13} /> Synthetic sample data · Read-only
         </span>
       </div>
     </footer>
@@ -838,8 +838,8 @@ export default function Home() {
     <section className="page overview-page">
       <div className="hero">
         <div className="hero-kicker">
-          <span className="live-dot" /> Querify Clarification Engine v1.3{" "}
-          <b>AST Guarded</b>
+          <span className="live-dot" /> Querify · Structured SQL v1.3{" "}
+          <b>Read-only</b>
         </div>
         <h1>
           Ask in English.
@@ -1012,11 +1012,11 @@ export default function Home() {
     <section className="page console-page">
       <div className="page-heading">
         <div>
-          <span>› NATURAL LANGUAGE CONSOLE</span>
-          <h2>Translate intent into a verified query.</h2>
+          <span>› STRUCTURED QUERY WORKSPACE</span>
+          <h2>From question to verified SQL.</h2>
           <p>
-            A server-side AI model maps your question to guarded SQL and runs it
-            only against the synthetic sample tables.
+            Ask plain-language questions over six sample datasets. Common
+            queries use built-in rules; no API key is required.
           </p>
         </div>
         <div className="guard-pill">
@@ -1132,13 +1132,13 @@ export default function Home() {
                     void submitQuery(sample);
                   }}
                 >
-                  {sample} <small>AMBIGUOUS</small>
+                  {sample} <small>NEEDS DETAIL</small>
                 </button>
               ))}
             </div>
           </div>
           <div>
-            <span className="group-label">✣ Direct Analytical Questions:</span>
+            <span className="group-label">✣ Ready-to-run questions:</span>
             <div className="chip-row">
               {[
                 "Show the five most profitable companies",
@@ -1158,7 +1158,7 @@ export default function Home() {
             </div>
           </div>
           <div>
-            <span className="group-label">✦ One-tap AI sample domains:</span>
+            <span className="group-label">✦ Sample questions by dataset:</span>
             <div
               className="chip-row domain-prompt-row"
               aria-label="Sample questions for each supported domain"
@@ -1192,30 +1192,39 @@ export default function Home() {
         </div>
       </div>
       <aside className="studio-sidebar">
-        <div className="studio-card" data-cursor-spotlight>
+        <div className="studio-card query-mode-card" data-cursor-spotlight>
           <h3>
-            <Sparkles size={15} /> Model Fine-Tuning Studio
+            <Table2 size={15} /> Structured query mode
           </h3>
           <p>
-            Shape the query experience around your schema conventions without
-            adding noise to the workspace.
+            Common questions use built-in rules and run only against the six
+            included sample tables.
           </p>
-          <label>
-            Base model architecture
-            <select>
-              <option>SQLCoder-7B · Optimized</option>
-              <option>CodeLlama · Enterprise</option>
-            </select>
-          </label>
-          <label>
-            Schema adaptation depth
-            <input type="range" min="1" max="10" defaultValue="5" />
-          </label>
+          <div className="guardrail-row">
+            <span>Query planner</span>
+            <b>RULE-BASED</b>
+          </div>
+          <div className="guardrail-row">
+            <span>API key</span>
+            <b>NOT REQUIRED</b>
+          </div>
+          <div className="guardrail-row">
+            <span>Data</span>
+            <b>SYNTHETIC SAMPLES</b>
+          </div>
           <button
             className="studio-action"
-            onClick={() => notify("Fine-tuning job staged for review")}
+            disabled={isExecuting}
+            onClick={() => {
+              const sample = "Show restaurants in Seattle rated above 4.5";
+              setQuery(sample);
+              setResult(null);
+              setApiError("");
+              setShowRecoveryPrompts(false);
+              void submitQuery(sample);
+            }}
           >
-            Launch schema job <ArrowRight size={13} />
+            Run an example query <ArrowRight size={13} />
           </button>
         </div>
         <div className="studio-card guardrail-card" data-cursor-spotlight>
@@ -1273,7 +1282,7 @@ export default function Home() {
           </div>
           <div className="clarification-copy">
             {serverClarification ? (
-              <>Choose an option or enter a short answer so the model can refine the safe sample query.</>
+              <>Choose an option or enter a short answer so Querify can refine the safe sample query.</>
             ) : clarificationMode === "period" ? (
               <>“Revenue report” needs a time window before Querify can produce a defensible comparison.</>
             ) : (
@@ -1553,7 +1562,7 @@ export default function Home() {
         )}
         {resultTab === "sql" && (
           <div className="result-summary">
-            <Sparkles size={15} />
+            <BarChart3 size={15} />
             <span>
               <b>Business insight</b> {current.businessInsight}
             </span>
@@ -1902,49 +1911,46 @@ export default function Home() {
     <section className="page architecture-page">
       <div className="vision-card">
         <span>◫ PROJECT VISION & PHILOSOPHY</span>
-        <h2>Ambiguity is the primary failure mode of text-to-SQL.</h2>
+        <h2>Clarity before every query.</h2>
         <p>
-          When a stakeholder asks a deceptively simple question like{" "}
-          <i>“Who is our top client?”</i>, standard AI chatbots blindly assume a
-          single metric and produce convincing but misleading numbers.
+          A question like <i>“Which city has the best options?”</i> needs a
+          dataset and a definition of “best” before the result can be trusted.
         </p>
         <p>
-          <b>Querify</b> solves this by introducing a{" "}
-          <b>Clarification Engine</b> paired with a{" "}
-          <b>JSqlParser AST Security Guard</b>. Execution halts when ambiguity
-          is flagged, engaging the user in a rapid, structured clarification
-          dialogue before generating mathematically sound, read-only SQL.
+          <b>Querify</b> uses structured rules for common questions, asks for
+          missing details instead of guessing, and runs validated read-only SQL
+          only against clearly labeled sample data.
         </p>
       </div>
       <div className="architecture-block">
         <span>SYSTEM ARCHITECTURE</span>
-        <h2>End-to-End Enterprise Data Flow</h2>
+        <h2>From question to sample result</h2>
         <div className="architecture-flow">
           {[
             {
               icon: <LayoutDashboard />,
-              title: "React 18 UI",
-              copy: "Vite 5, Tailwind CSS, Recharts. Dispatches REST requests & renders sticky tables.",
+              title: "Query Console",
+              copy: "Collects a plain-language question and shows SQL, sample rows, and chart views.",
             },
             {
               icon: <Server />,
-              title: "Spring Boot 3",
-              copy: "Java 17/21 REST Gateway. Handles session UUIDs, turns, and exception mapping.",
+              title: "Vercel Query API",
+              copy: "Validates the request and runs in the same-origin serverless route.",
             },
             {
-              icon: <Sparkles />,
-              title: "AI Engine",
-              copy: "Ambiguity detector, metric projections, and option synthesizer.",
+              icon: <Table2 />,
+              title: "Structured planner",
+              copy: "Built-in rules cover common filters and metrics; unclear questions pause for input.",
             },
             {
               icon: <ShieldCheck />,
-              title: "AST Guard",
-              copy: "Parses SQL tree. Strictly blocks mutation and statement chaining.",
+              title: "Read-only SQL guard",
+              copy: "Allowlisted tables, bound values, and one read-only SELECT per request.",
             },
             {
               icon: <Database />,
-              title: "MySQL 8 Store",
-              copy: "HikariCP pool, 6 relational domain tables, and H2 test fallback.",
+              title: "Sample SQLite data",
+              copy: "Six seeded synthetic datasets; results are examples, not live market data.",
             },
           ].map((item, index) => (
             <article key={item.title}>
@@ -1961,21 +1967,21 @@ export default function Home() {
         <span>CORE ARCHITECTURE</span>
         <h2>Engineered for precision & security</h2>
         <p>
-          Architectural guarantees designed to eliminate AI hallucination and
-          database vulnerabilities.
+          Common-language rules, explicit clarification, and a read-only
+          execution boundary keep each step inspectable.
         </p>
       </div>
       <div className="flow-grid four">
         {[
           {
-            title: "Clarification Engine",
-            icon: <Sparkles />,
-            copy: "Multi-turn disambiguation flags semantic gaps and guarantees user intent before synthesis.",
+            title: "Clarification prompts",
+            icon: <Table2 />,
+            copy: "Missing dataset or metric details are requested before a query runs.",
           },
           {
-            title: "AST Security Guard",
+            title: "Read-only SQL guard",
             icon: <ShieldCheck />,
-            copy: "JSqlParser verifies the AST, enforcing read-only SELECT limits and blocking injection attempts.",
+            copy: "Allowlisted identifiers, parameterized filters, and single-SELECT limits protect execution.",
           },
           {
             title: "Auto-Generated Charts",
@@ -1983,9 +1989,9 @@ export default function Home() {
             copy: "Charts are deduced directly from executed SQL column types and cardinality.",
           },
           {
-            title: "Zero-Setup Demo Mode",
+            title: "Key-free sample mode",
             icon: <Zap />,
-            copy: "Visitors can test clarification, SQL, and charts without external API keys.",
+            copy: "Common sample queries run without API keys or external service setup.",
           },
         ].map(item => (
           <article
@@ -2000,18 +2006,18 @@ export default function Home() {
       </div>
       <div className="comparison">
         <div>
-          <span>STANDARD TEXT-TO-SQL CHATBOT</span>
-          <p>✕ Blind assumptions</p>
-          <p>✕ Hallucinated schemas</p>
-          <p>✕ Vulnerable execution</p>
-          <p>✕ Misleading visuals</p>
+          <span>WHEN A QUESTION IS UNCLEAR</span>
+          <p>✕ Metric not specified</p>
+          <p>✕ Dataset not selected</p>
+          <p>✕ Filter outside sample data</p>
+          <p>✕ No matching sample rows</p>
         </div>
         <div>
-          <span>QUERIFY CLARIFICATION ENGINE</span>
-          <p>✓ Proactive ambiguity detection</p>
-          <p>✓ Structured disambiguation</p>
-          <p>✓ AST read-only guard</p>
-          <p>✓ Deterministic visualizations</p>
+          <span>QUERIFY WORKFLOW</span>
+          <p>✓ Ask for the missing detail</p>
+          <p>✓ Use one sample dataset</p>
+          <p>✓ Validate read-only SQL</p>
+          <p>✓ Offer a broader example</p>
         </div>
       </div>
     </section>
