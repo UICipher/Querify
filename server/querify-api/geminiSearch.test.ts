@@ -74,6 +74,17 @@ describe("Gemini Google Search grounding client", () => {
     expect(requestBody.generation_config).toBeUndefined();
   });
 
+  it("defaults to Gemini 2.5 Flash when no model override is configured", async () => {
+    vi.stubEnv("QUERIFY_GEMINI_API_KEY", "server-only-test-key");
+    vi.stubEnv("QUERIFY_GEMINI_MODEL", "");
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify(groundedPayload()), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await requestGeminiResearch("Any topic?");
+    const [, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
+    expect(JSON.parse(String(init.body)).model).toBe("gemini-2.5-flash");
+  });
+
   it("rejects an answer when Google returns no grounded citations or suggestions", async () => {
     vi.stubEnv("QUERIFY_GEMINI_API_KEY", "server-only-test-key");
     vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({

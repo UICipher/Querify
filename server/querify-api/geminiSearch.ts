@@ -73,7 +73,7 @@ export async function requestGeminiResearch(
   fetcher: typeof fetch = fetch
 ): Promise<GeminiResearchResult> {
   const apiKey = process.env.QUERIFY_GEMINI_API_KEY?.trim();
-  const model = process.env.QUERIFY_GEMINI_MODEL?.trim() || "gemini-3.8-flash";
+  const model = process.env.QUERIFY_GEMINI_MODEL?.trim() || "gemini-2.5-flash";
   if (!apiKey || !/^[a-zA-Z0-9._-]{1,100}$/.test(model)) {
     throw new GeminiResearchConfigurationError();
   }

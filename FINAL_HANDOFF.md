@@ -36,7 +36,7 @@ Additional interactions include **Topic roulette** for cross-topic starting ques
 For real Web Research on Vercel, set the following in the project’s **server-side** Environment Variables:
 
 - `QUERIFY_GEMINI_API_KEY` — required Gemini API key.
-- `QUERIFY_GEMINI_MODEL` — optional; defaults to `gemini-3.8-flash`.
+- `QUERIFY_GEMINI_MODEL` — optional; defaults to `gemini-2.5-flash` for Search grounding availability on Google's Free tier.
 
 Do not use a `VITE_` prefix and do not commit the key. After setting the value for Production (and Preview if needed), redeploy. `AI_SETUP.md` explains the setup, Google Search grounding requirements, source-display requirement, limits, and additional safeguards. The SQL model variables are separate and optional.
 
@@ -56,8 +56,8 @@ The static local Vite preview does not host Vercel serverless functions. Use the
 
 Vercel rejects Hobby deployments with more than 12 Serverless Functions ([function-count limit](https://vercel.link/function-count-limit)). Keep only the four route handlers in `api/`; shared modules, declarations, and tests belong under `server/querify-api/`. The UI contract test enforces this layout.
 
-The first live production request after the Gemini key was configured exposed a request/response protocol mismatch. This release switches to the documented Gemini Interactions API; verify a live sourced answer after the new Vercel deployment is Ready.
+The Interactions API reached Google in production, but Gemini 3.8 returned HTTP 429. Google's current pricing lists Search grounding for Gemini 3 and newer as unavailable on the Free tier. Querify now defaults to the supported `gemini-2.5-flash` model; verify a live sourced answer after this model-default update is deployed.
 
 ## Publication status
 
-The Vercel project is linked to `UICipher/Querify`, and its Gemini key is configured as a server-side **Production** secret. The compatibility fix is being released from `main`; after its deployment is Ready, ask a general-topic question and verify that the returned answer includes Google Search citations. If access, quota, or model configuration fails, the UI returns a targeted error rather than substituting demo rows.
+The Vercel project is linked to `UICipher/Querify`, and its Gemini key is configured as a server-side **Production** secret. The Interactions API compatibility fix is live; the 2.5 Flash default is being released from `main`. After that deployment is Ready, ask a general-topic question and verify that the returned answer includes Google Search citations. If access, quota, or model configuration fails, the UI returns a targeted error rather than substituting demo rows.

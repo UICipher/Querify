@@ -107,7 +107,7 @@ export default async function handler(
       if (error.status === 429) {
         return sendJson(res, 502, {
           code: "GEMINI_QUOTA_LIMIT",
-          error: "Google Gemini reached a quota or billing limit. Check the Google AI project limits, then retry. No demo data was used.",
+          error: "Google Gemini declined this request because of a rate, quota, spend, or plan limit. Check AI Studio limits and confirm the selected model supports Google Search grounding on your tier. No demo data was used.",
         });
       }
       if (error.status === 400 || error.status === 404) {
