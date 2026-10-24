@@ -1,6 +1,0 @@
-{
-  "buildCommand": "pnpm run build:static",
-  "outputDirectory": "dist/public",
-  "framework": "vite",
-  "cleanUrls": true
-}
