@@ -1,9 +1,7 @@
-# Querify repository overlay
+# Querify blue-theme patch
 
-This archive contains only the changed and new deployable source files, using paths relative to the Querify repository root.
+This is a minimal patch for the already-updated UICipher/Querify repository. It contains only `client/src/index.css`, which removes the remaining purple accents from the logo/female badge, schema-studio icon, slider, Launch schema job button, hover/focus glows, and related controls.
 
-1. Extract this ZIP on your computer.
-2. Copy its contents into the root of your existing `UICipher/Querify` repository and allow matching files to be replaced. Do not create a nested `querify/` folder and do not upload the ZIP as a single file.
-3. Commit/push the overlaid files to `main`. If Vercel is connected to that branch, it can build the deployment from the new commit.
+In the existing repository, replace **only** `client/src/index.css` with the file at this same path. Keep the other repository files; do not delete the repo or upload a nested `querify/` folder. Commit the change on `main`. If Vercel is connected to `main`, it should redeploy automatically. After deployment, hard-refresh or reopen the website.
 
-The patch does not delete any existing repository files.
+The restaurant/hotel scope guard is already present in the current uploaded code; this patch only changes the visual palette.
