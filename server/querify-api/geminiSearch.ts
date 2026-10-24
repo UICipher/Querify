@@ -27,7 +27,11 @@ export class GeminiResearchConfigurationError extends Error {
 export class GeminiResearchProviderError extends Error {
   readonly code = "GEMINI_SEARCH_FAILED";
 
-  constructor(readonly status?: number) {
+  constructor(
+    readonly status?: number,
+    readonly providerStatus?: string,
+    readonly providerMessage?: string
+  ) {
     super("Google Search grounding did not return a usable sourced answer.");
     this.name = "GeminiResearchProviderError";
   }
@@ -55,6 +59,16 @@ function safeHttpsUrl(value: unknown): string | null {
   } catch {
     return null;
   }
+}
+
+function safeProviderMessage(value: unknown, secrets: string[]): string | undefined {
+  if (typeof value !== "string") return undefined;
+  let message = value.replace(/\s+/g, " ").trim();
+  for (const secret of secrets) {
+    if (secret.length >= 4) message = message.replaceAll(secret, "[redacted]");
+  }
+  message = message.replace(/AIza[0-9A-Za-z_-]{20,}/g, "[redacted]");
+  return message.slice(0, 240) || undefined;
 }
 
 function integerField(
@@ -293,7 +307,15 @@ export async function requestGeminiResearch(
     throw new GeminiResearchProviderError();
   }
 
-  if (!response.ok) throw new GeminiResearchProviderError(response.status);
+  if (!response.ok) {
+    const providerPayload = asRecord(await response.json().catch(() => null));
+    const providerError = asRecord(providerPayload?.error);
+    const providerStatus = typeof providerError?.status === "string"
+      ? providerError.status.slice(0, 64)
+      : undefined;
+    const providerMessage = safeProviderMessage(providerError?.message, [apiKey, query]);
+    throw new GeminiResearchProviderError(response.status, providerStatus, providerMessage);
+  }
   const payload = asRecord(await response.json().catch(() => null));
   if (!payload) throw new GeminiResearchProviderError();
   return useGenerateContent

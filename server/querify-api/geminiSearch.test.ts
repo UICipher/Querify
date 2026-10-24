@@ -133,6 +133,24 @@ describe("Gemini Google Search grounding client", () => {
       .rejects.toBeInstanceOf(GeminiResearchProviderError);
   });
 
+  it("redacts the key and user query from provider diagnostics", async () => {
+    vi.stubEnv("QUERIFY_GEMINI_API_KEY", "server-only-test-key");
+    vi.stubEnv("QUERIFY_GEMINI_MODEL", "");
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({
+      error: {
+        code: 400,
+        status: "INVALID_ARGUMENT",
+        message: "Request private research question rejected with key server-only-test-key",
+      },
+    }), { status: 400 })));
+    await expect(requestGeminiResearch("private research question"))
+      .rejects.toMatchObject({
+        status: 400,
+        providerStatus: "INVALID_ARGUMENT",
+        providerMessage: "Request [redacted] rejected with key [redacted]",
+      });
+  });
+
   it("preserves provider HTTP status for safe error diagnosis", async () => {
     vi.stubEnv("QUERIFY_GEMINI_API_KEY", "server-only-test-key");
     vi.stubEnv("QUERIFY_GEMINI_MODEL", "");

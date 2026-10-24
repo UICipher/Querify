@@ -40,7 +40,7 @@ For real Web Research on Vercel, set the following in the project’s **server-s
 
 Do not use a `VITE_` prefix and do not commit the key. After setting the value for Production (and Preview if needed), redeploy. `AI_SETUP.md` explains the setup, Google Search grounding requirements, source-display requirement, limits, and additional safeguards. The SQL model variables are separate and optional.
 
-The static local Vite preview does not host Vercel serverless functions. Use the deployed Vercel URL (or configure `VITE_QUERY_API_URL`) to exercise real Web Research. A missing key, unavailable model, or ungrounded provider response must remain an explicit error—never replace it with synthetic data.
+The static local Vite preview does not host Vercel serverless functions. Use the deployed Vercel URL (or configure `VITE_QUERY_API_URL`) to exercise real Web Research. A missing key, unavailable model, or ungrounded provider response must remain an explicit error—never replace it with synthetic data. Google 400/404 responses may include a short sanitized provider reason for troubleshooting; the API key and user's query are redacted.
 
 ## Validation completed
 

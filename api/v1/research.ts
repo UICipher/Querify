@@ -111,9 +111,12 @@ export default async function handler(
         });
       }
       if (error.status === 400 || error.status === 404) {
+        const providerDetails = [error.providerStatus, error.providerMessage]
+          .filter((detail): detail is string => Boolean(detail))
+          .join(": ");
         return sendJson(res, 502, {
           code: "GEMINI_MODEL_OR_REQUEST_REJECTED",
-          error: "Google rejected the Gemini model or request. Verify the model ID and Google Search support, then retry. No demo data was used.",
+          error: `Google rejected the Gemini model or request. Verify the model ID and Google Search support${providerDetails ? `. Google says: ${providerDetails}` : ""}. No demo data was used.`,
         });
       }
       return sendJson(res, 502, {

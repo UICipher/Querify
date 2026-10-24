@@ -109,6 +109,23 @@ describe("Vercel general Web Research endpoint", () => {
     expect(result.body.code).toBe("GEMINI_QUOTA_LIMIT");
   });
 
+  it("returns sanitized Google request diagnostics without echoing secrets", async () => {
+    vi.stubEnv("QUERIFY_GEMINI_API_KEY", "server-only-test-key");
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({
+      error: {
+        code: 400,
+        status: "INVALID_ARGUMENT",
+        message: "Request private research question rejected with key server-only-test-key",
+      },
+    }), { status: 400 })));
+    const result = await postResearch({ query: "private research question" });
+    expect(result.status).toBe(502);
+    expect(result.body.error).toContain("INVALID_ARGUMENT");
+    expect(result.body.error).toContain("Request [redacted] rejected with key [redacted]");
+    expect(result.body.error).not.toContain("server-only-test-key");
+    expect(result.body.error).not.toContain("private research question");
+  });
+
   it("validates blank and too-long questions", async () => {
     expect((await postResearch({ query: "   " })).status).toBe(422);
     expect((await postResearch({ query: "x".repeat(1001) })).status).toBe(422);
