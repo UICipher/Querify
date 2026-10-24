@@ -1,6 +1,6 @@
-# Enable the AI-backed Querify demo
+# Optional: Enable an external AI model
 
-The deployed Vercel API sends a natural-language question to an OpenAI-compatible chat-completions endpoint, receives a constrained JSON query plan, compiles a parameterized read-only `SELECT`, and runs it against Querify’s seeded synthetic SQLite tables. The API key stays on the server and is never included in browser code or the repository.
+Querify works without provider credentials. In no-key mode, the deployed Vercel API uses deterministic rules for the supported sample tables, requests clarification rather than guessing where practical, and never calls an external service. Add the settings below only if you want broader language interpretation from an OpenAI-compatible model. In that mode, the model returns a constrained JSON query plan; Querify validates it, compiles a parameterized read-only `SELECT`, and runs it against the seeded synthetic SQLite tables. The API key stays on the server.
 
 ## Add the provider settings in Vercel
 
@@ -16,10 +16,10 @@ Keep all three settings in Vercel’s server-side environment configuration. `QU
 
 After deployment, use a sample prompt such as **“Show restaurants in Seattle rated above 4.5”** or click a domain prompt in Querify. The result should show generated SQL, matching rows, and a notice that the records are synthetic. The tables cover companies, restaurants, hotels, homes, cars, and phones; they are examples, not live listings, prices, or market data. A question naming multiple domains asks you to choose one; the API will not execute a plan against a different table than the one selected.
 
-If the key or model ID is missing, the API returns an `AI_NOT_CONFIGURED` error rather than quietly returning company fixtures. A provider/configuration failure is also surfaced; check the exact model ID, base URL, account access, and provider quota. A supported-domain query that matches no sample records returns an empty result rather than unrelated rows.
+If the key or model ID is missing, the API uses no-key structured mode and returns a provenance notice; it does not quietly substitute company fixtures for another domain. If a configured provider fails, the error is surfaced rather than silently switching planners. A supported-domain query that matches no sample records returns an empty result and a recovery action rather than unrelated rows.
 
 ## Cost and access note
 
 The endpoint limits request bodies to 16 KiB, natural-language prompts to 800 characters, results to at most 50 rows, and applies a best-effort per-serverless-instance request throttle. Because Vercel functions can scale across instances, this in-memory throttle is **not** a global production rate limiter. Before sharing the public demo widely, set provider-side spend limits/alerts and add a shared rate limiter or authenticated access if stronger abuse protection is needed.
 
-The local static preview intentionally does not contain a provider key. On local preview, non-company domains show a clear message that the deployed server-side AI API is required; they never fall back to company rows.
+The local static preview intentionally does not contain a provider key or host the Vercel serverless function. The deployed Vercel API runs the no-key structured mode by default. Local browser code never receives provider credentials.

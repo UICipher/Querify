@@ -270,6 +270,7 @@ export default function Home() {
   const [isListening, setIsListening] = useState(false);
   const [toast, setToast] = useState("");
   const [apiError, setApiError] = useState("");
+  const [showRecoveryPrompts, setShowRecoveryPrompts] = useState(false);
   const [isExecuting, setIsExecuting] = useState(false);
   const [conversationId, setConversationId] = useState("");
   const [lastClarificationAnswer, setLastClarificationAnswer] = useState("");
@@ -440,6 +441,7 @@ export default function Home() {
       return;
     }
     setApiError("");
+    setShowRecoveryPrompts(false);
     setServerClarification(null);
     setClarificationDraft("");
     setClarifying(false);
@@ -467,6 +469,7 @@ export default function Home() {
     const scopeIssue = detectUnsupportedDemoScope(submittedQuery);
     if (scopeIssue) {
       setApiError(scopeIssue.message);
+      setShowRecoveryPrompts(true);
       setClarifying(false);
       setConversationId("");
       setResult(null);
@@ -487,6 +490,7 @@ export default function Home() {
         const apiError = error as Error & { status?: number; code?: string };
         if (apiError.code === "UNSUPPORTED_DEMO_SCOPE") {
           setApiError(apiError.message);
+          setShowRecoveryPrompts(true);
           setClarifying(false);
           setConversationId("");
           setResult(null);
@@ -957,7 +961,7 @@ export default function Home() {
             copy: "Receive AST-validated SELECT SQL, inspect formatted data rows with sticky headers, and visualize distributions.",
           },
         ].map(item => (
-          <article className="feature-card" key={item.n}>
+          <article className="feature-card" data-cursor-spotlight key={item.n}>
             <span>{item.n}</span>
             <h3>{item.title}</h3>
             <p>{item.copy}</p>
@@ -991,7 +995,7 @@ export default function Home() {
             copy: "Schema cards, audit records, CSV export, and architecture notes make handoff straightforward.",
           },
         ].map(item => (
-          <article className="feature-card product-card" key={item.title}>
+          <article className="feature-card product-card" data-cursor-spotlight key={item.title}>
             <span>QUERIFY MODULE</span>
             <h3>{item.title}</h3>
             <p>{item.copy}</p>
@@ -1069,6 +1073,41 @@ export default function Home() {
             >
               <X size={14} />
             </button>
+          </div>
+        )}
+        {showRecoveryPrompts && (
+          <div
+            className="recovery-prompts"
+            role="group"
+            aria-label="Supported sample questions"
+          >
+            <span>Try a supported sample question instead:</span>
+            <div className="chip-row">
+              {[
+                "Rank companies by revenue growth",
+                "Show restaurants in Seattle rated above 4.5",
+                "Compare average hotel nightly rates by city",
+                "Find three-bedroom homes under $600,000",
+                "Rank cars by estimated range in miles",
+                "Show phones with the highest camera resolution",
+              ].map(sample => (
+                <button
+                  className="prompt-chip clarification-pill"
+                  data-cursor-spotlight
+                  key={sample}
+                  onClick={() => {
+                    setQuery(sample);
+                    setResult(null);
+                    setLastClarificationAnswer("");
+                    setApiError("");
+                    setShowRecoveryPrompts(false);
+                    void submitQuery(sample);
+                  }}
+                >
+                  {sample}
+                </button>
+              ))}
+            </div>
           </div>
         )}
         <div className="prompt-groups">
@@ -1392,6 +1431,27 @@ export default function Home() {
             <ShieldCheck size={14} /> {current.dataNotice}
           </div>
         )}
+        {current.rows.length === 0 && (
+          <div className="empty-result-recovery" role="status">
+            <div>
+              <b>No sample rows matched those filters.</b>
+              <span>Broaden the question to see the available records for this dataset.</span>
+            </div>
+            <button
+              className="prompt-chip clarification-pill"
+              data-cursor-spotlight
+              onClick={() => {
+                const domain = getSupportedDemoDomains(query)[0] ?? "companies";
+                const sample = `Show ${domain} sample records`;
+                setQuery(sample);
+                setLastClarificationAnswer("");
+                void submitQuery(sample);
+              }}
+            >
+              Show available sample rows <ArrowRight size={13} />
+            </button>
+          </div>
+        )}
         <div className="result-tabs">
           <button
             className={resultTab === "sql" ? "active" : ""}
@@ -1647,7 +1707,7 @@ export default function Home() {
         {explorerMode === "schema" ? (
           <div className="schema-grid">
             {filteredSchema.map(table => (
-              <article className="schema-card" key={table.name}>
+              <article className="schema-card" data-cursor-spotlight key={table.name}>
                 <div className="schema-title">
                   <span>
                     <Table2 size={14} /> {table.name}
@@ -1786,7 +1846,7 @@ export default function Home() {
       <div className="audit-list">
         {filteredAudit.length > 0 ? (
           filteredAudit.map((entry, index) => (
-            <article className="audit-entry" key={`${entry.time}-${index}`}>
+            <article className="audit-entry" data-cursor-spotlight key={`${entry.time}-${index}`}>
               <div className="audit-meta">
                 <span
                   className={`status-badge ${entry.status === "SUCCESS" ? "success" : "blocked"}`}

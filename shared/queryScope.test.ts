@@ -30,6 +30,8 @@ describe("detectUnsupportedDemoScope", () => {
     "data about bicycles in 2024",
     "show me the highest-rated dragons",
     "Compare companies and bitcoin prices",
+    "What's the weather tomorrow?",
+    "Compare companies and weather",
   ])("rejects a new unsupported target noun: %s", query => {
     const issue = detectUnsupportedDemoScope(query);
     expect(issue?.code).toBe("UNSUPPORTED_DEMO_SCOPE");

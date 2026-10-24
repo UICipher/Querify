@@ -18,6 +18,9 @@ The supplied CraftSolve Hackathon 2026 judging image was used as a presentation 
 - Restored the signature calligraphy `Q`, indigo/purple/cyan gradient identity, glass blur panels, glow, database selector, Security & Auth control, and right-side studio cards.
 - Added a real two-column Query Console workspace with Model Fine-Tuning Studio, SqlSecurityGuard status, and Workspace Source panels.
 - Added a multi-turn revenue-report clarification flow with This Month, Last Month, and All Time options.
+- Added a no-key structured query path for the six existing sample domains. It uses deterministic rules by default, keeps the external model optional, asks when a domain or company-performance metric is ambiguous, and does not substitute unrelated rows.
+- Added supported-query suggestions for out-of-scope requests and a one-click broadening action for zero-row results.
+- Extended the existing pointer spotlight to feature, schema, and audit cards, and added restrained result-row hover feedback in the same cyan/slate palette.
 - Added the analytics payload surface: business insight, chart hint, raw rows/columns, table view, chart projection, CSV export, and audit records.
 - Replaced the generic-feeling font stack with A tight system sans stack for UI, a restrained Georgia/serif mark, and the platform monospace stack for technical labels and SQL.
 - Added tactile click states, hover lift, glow, shine sweeps, staggered entrance motion, voice-listening pulse, keyboard-visible focus, and reduced-motion support. The final type stack is Karla, Fraunces, and IBM Plex Mono.
@@ -47,10 +50,10 @@ The supplied CraftSolve Hackathon 2026 judging image was used as a presentation 
 ## Criteria alignment
 
 - **Structure / code quality:** separated React page, CSS system, backend DTO/controller/service/security modules, tests, and documentation.
-- **Core functions:** multi-turn clarification, verified SQL, table/chart analytics, schema explorer, audit trail, and export path.
+- **Core functions:** multi-turn clarification, no-key rule-based query planning, verified SQL, guided recovery for unsupported/empty queries, table/chart analytics, schema explorer, audit trail, and export path.
 - **Backend deployment readiness:** Spring Boot 3 source, read-only datasource settings, timeout limits, and HTTP 422 unsafe-query handling.
 - **Frontend deployment:** responsive Vercel build with a live public alias.
-- **README/UI/UX:** this handoff, README, route manifest, polished responsive UI, keyboard focus, and reduced-motion fallback.
+- **README/UI/UX:** this handoff, README, route manifest, polished responsive UI, supported-query recovery, restrained pointer spotlights, keyboard focus, and reduced-motion fallback.
 - **Pitch/demo clarity:** the Overview page now explains the value, workflow, product modules, and implementation story without relying on vague AI marketing copy.
 
 ## Detailed design provenance for the team

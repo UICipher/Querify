@@ -18,6 +18,7 @@ import {
   InvalidQueryPlanError,
   validateQueryPlan,
 } from "../queryPlan.js";
+import { buildRuleBasedPlan } from "../ruleBasedPlanner.js";
 import {
   LlmConfigurationError,
   LlmProviderError,
@@ -165,8 +166,20 @@ export default async function handler(
   }
 
   const startedAt = Date.now();
+  let usedLocalPlanner = false;
   try {
-    const rawPlan = await requestQueryPlan(query, clarificationAnswer || undefined);
+    let rawPlan: unknown;
+    try {
+      rawPlan = await requestQueryPlan(query, clarificationAnswer || undefined);
+    } catch (error) {
+      if (!(error instanceof LlmConfigurationError)) throw error;
+      usedLocalPlanner = true;
+      rawPlan = buildRuleBasedPlan(
+        query,
+        clarificationAnswer,
+        requestedDomain
+      );
+    }
     const plan = validateQueryPlan(rawPlan);
 
     if (plan.status === "unsupported") {
@@ -219,7 +232,10 @@ export default async function handler(
         ? plan.insight
         : `No sample records in ${plan.table} matched the requested filters.`,
       chartHint: { chartType: plan.chartType, title: plan.title },
-      dataNotice: SAMPLE_DATA_NOTICE,
+      dataNotice: usedLocalPlanner
+        ? `No-key structured mode: rule-based interpretation. ${SAMPLE_DATA_NOTICE}`
+        : SAMPLE_DATA_NOTICE,
+      plannerMode: usedLocalPlanner ? "local_rules" : "ai_model",
       executionTimeMs: Math.max(1, Date.now() - startedAt),
     });
   } catch (error) {

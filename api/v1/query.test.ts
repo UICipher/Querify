@@ -268,18 +268,58 @@ describe("Vercel AI-backed query API", () => {
     expect(result.body.code).toBe("REQUEST_TOO_LARGE");
   });
 
-  it("returns a clear configuration error and does not call any provider when the server key is missing", async () => {
+  it("runs a supported query with deterministic rules and no provider key", async () => {
     vi.stubEnv("QUERIFY_LLM_API_KEY", "");
     vi.stubEnv("QUERIFY_LLM_MODEL", "");
     const fetchMock = vi.fn();
     vi.stubGlobal("fetch", fetchMock);
 
-    const result = await postQuery({ query: "Show restaurants by rating" });
-    expect(result.status).toBe(503);
-    expect(result.body.code).toBe("AI_NOT_CONFIGURED");
-    expect(result.body.error).toContain("QUERIFY_LLM_API_KEY");
+    const result = await postQuery({
+      query: "Show restaurants in Seattle rated above 4.5",
+    });
+    expect(result.status).toBe(200);
+    expect(result.body.status).toBe("success");
+    expect(result.body.sql).toContain('FROM "restaurants"');
+    expect(result.body.rows).toEqual([
+      { name: "Harbor & Herb", city: "Seattle", rating: 4.8 },
+    ]);
+    expect(result.body.dataNotice).toContain("No-key structured mode");
+    expect(result.body.plannerMode).toBe("local_rules");
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("applies the spelled-out bedroom count and budget in a supported homes query", async () => {
+    vi.stubEnv("QUERIFY_LLM_API_KEY", "");
+    vi.stubEnv("QUERIFY_LLM_MODEL", "");
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await postQuery({
+      query: "Find three-bedroom homes under $600,000",
+    });
+    expect(result.status).toBe(200);
+    expect(result.body.sql).toContain('"bedrooms" = ?');
+    expect(result.body.sql).toContain('"listing_price_usd" < ?');
+    const rows = result.body.rows as Array<Record<string, unknown>>;
+    expect(rows.length).toBeGreaterThan(0);
+    expect(rows.every(row => row.bedrooms === 3)).toBe(true);
+    expect(rows.every(row => Number(row.listing_price_usd) < 600_000)).toBe(true);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("asks for a dataset when an offline question does not identify one", async () => {
+    vi.stubEnv("QUERIFY_LLM_API_KEY", "");
+    vi.stubEnv("QUERIFY_LLM_MODEL", "");
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await postQuery({ query: "Show me the top sample results" });
+    expect(result.status).toBe(200);
+    expect(result.body.status).toBe("clarification_needed");
+    expect(result.body.question).toContain("Which sample dataset");
+    expect(result.body.options).toHaveLength(6);
     expect(result.body.rows).toBeUndefined();
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it("rejects unsupported target nouns before calling the model and never returns company fixtures", async () => {

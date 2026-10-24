@@ -9,6 +9,7 @@ export type LiveQueryResponse = {
   rows?: Array<Record<string, string | number | null>>;
   businessInsight?: string;
   dataNotice?: string;
+  plannerMode?: "local_rules" | "ai_model";
   chartHint?: { chartType?: "table" | "bar" | "line"; title?: string };
   executionTimeMs?: number;
 };

@@ -11,6 +11,10 @@ type DomainRule = {
 
 const unsupportedDomains: DomainRule[] = [
   {
+    domain: "weather and climate",
+    pattern: /\b(?:weather|forecasts?|temperature|rainfall|climate)\b/i,
+  },
+  {
     domain: "healthcare",
     pattern:
       /\b(?:hospitals?|clinics?|patients?|pharmacies?|healthcare|medical\s+records?)\b/i,
@@ -149,7 +153,12 @@ const ignoredTargetWords = new Set([
   "profit",
   "profits",
   "query",
+  "result",
+  "results",
+  "sample",
+  "samples",
   "records",
+  "record",
   "report",
   "rating",
   "ratings",
