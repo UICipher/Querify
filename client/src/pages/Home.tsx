@@ -32,7 +32,7 @@ export default function Home() {
 
       <main className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="md:col-span-2 space-y-6">
-          <div className="glass-card-glow p-6 rounded-xl border border-white/10 bg-[#0c1017] transition-all hover:border-cyan-500/40">
+          <div className="glass-card-glow p-6 rounded-xl border border-white/10 bg-[#0c1017]">
             <h2 className="text-lg font-semibold mb-2">Query Console</h2>
             <p className="text-sm text-slate-400 mb-4">Turn an imprecise question into a decision-ready answer with secure SQL guardrails.</p>
             
@@ -44,7 +44,7 @@ export default function Home() {
                 placeholder="Ask a business question (e.g., revenue report)..."
                 className="flex-1 bg-black/40 border border-white/10 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-cyan-500"
               />
-              <button className="interactive-btn px-5 py-2.5 bg-cyan-600 hover:bg-cyan-500 text-white font-medium text-sm rounded-lg shadow-lg shadow-cyan-500/20 cursor-pointer transition-all hover:-translate-y-0.5">
+              <button className="interactive-btn px-5 py-2.5 bg-cyan-600 hover:bg-cyan-500 text-white font-medium text-sm rounded-lg shadow-lg shadow-cyan-500/20 cursor-pointer">
                 Run Query
               </button>
             </div>
