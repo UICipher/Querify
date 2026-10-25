@@ -13,7 +13,7 @@ export async function executeWebResearch(query: string): Promise<WebResearchResp
   const base = queryApiUrl();
   if (!base) {
     const error = new Error(
-      "Web Research needs the deployed API. Open the Vercel deployment or configure VITE_QUERY_API_URL."
+      "Knowledge Answers need the deployed Vercel API. Open the deployment or configure VITE_QUERY_API_URL."
     ) as Error & { code?: string };
     error.code = "RESEARCH_API_NOT_CONFIGURED";
     throw error;
@@ -31,7 +31,7 @@ export async function executeWebResearch(query: string): Promise<WebResearchResp
   const body = await response.json().catch(() => ({}));
   if (!response.ok) {
     const error = new Error(
-      typeof body?.error === "string" ? body.error : `Web research failed (${response.status}).`
+      typeof body?.error === "string" ? body.error : `Answer request failed (${response.status}).`
     ) as Error & { status?: number; code?: string };
     error.status = response.status;
     error.code = typeof body?.code === "string" ? body.code : undefined;

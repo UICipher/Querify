@@ -22,21 +22,8 @@ async function postResearch(payload: Record<string, unknown>) {
   return { status: response.statusCode, body: JSON.parse(responseBody) as Record<string, unknown> };
 }
 
-function generateContentPayload(sourceUrl = "https://example.com/source") {
-  const answer = "A current, sourced answer.";
-  return {
-    candidates: [{
-      content: { parts: [{ text: answer }] },
-      groundingMetadata: {
-        searchEntryPoint: { renderedContent: "<div>Google Search suggestions</div>" },
-        groundingChunks: [{ web: { uri: sourceUrl, title: "Example source" } }],
-        groundingSupports: [{
-          segment: { startIndex: 0, endIndex: answer.length, text: answer },
-          groundingChunkIndices: [0],
-        }],
-      },
-    }],
-  };
+function textOnlyPayload(answer = "A useful answer from existing model knowledge.") {
+  return { interaction: { output_text: answer } };
 }
 
 afterEach(() => {
@@ -44,11 +31,11 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-describe("Vercel general Web Research endpoint", () => {
-  it("returns an explicit configuration error instead of substituting demo rows", async () => {
+describe("Vercel text-only Knowledge Answers endpoint", () => {
+  it("returns a configuration error instead of substituting demo rows", async () => {
     const fetchMock = vi.fn();
     vi.stubGlobal("fetch", fetchMock);
-    const result = await postResearch({ query: "What is new in astronomy?" });
+    const result = await postResearch({ query: "What is photosynthesis?" });
     expect(result.status).toBe(503);
     expect(result.body.code).toBe("GEMINI_NOT_CONFIGURED");
     expect(result.body.error).toContain("No demo data was used");
@@ -56,57 +43,80 @@ describe("Vercel general Web Research endpoint", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it("uses Gemini 2.5 GenerateContent Search grounding and returns source citations without persistence", async () => {
+  it("returns a text-only answer with no sources, citations, or Search tools", async () => {
     vi.stubEnv("QUERIFY_GEMINI_API_KEY", "server-only-test-key");
-    const fetchMock = vi.fn(async () => new Response(JSON.stringify(generateContentPayload()), {
+    vi.stubEnv("QUERIFY_GEMINI_MODEL", "gemini-3.5-flash-lite");
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify(textOnlyPayload()), {
       status: 200,
       headers: { "Content-Type": "application/json" },
     }));
     vi.stubGlobal("fetch", fetchMock);
-    const result = await postResearch({ query: "Find recent ocean research in any language" });
+    const result = await postResearch({ query: "What are common ways to rank restaurants?" });
     expect(result.status).toBe(200);
-    expect(result.body.answer).toBe("A current, sourced answer.");
-    expect(result.body.sources).toEqual([
-      { title: "Example source", url: "https://example.com/source" },
-    ]);
-    expect(result.body.citations).toEqual([{ endIndex: 26, sourceIndices: [0] }]);
-    expect(result.body.searchSuggestionsHtml).toContain("Google Search suggestions");
+    expect(result.body.answer).toBe("A useful answer from existing model knowledge.");
+    expect(result.body.sources).toEqual([]);
+    expect(result.body.citations).toEqual([]);
+    expect(result.body.searchSuggestionsHtml).toBe("");
     expect(result.body.rows).toBeUndefined();
+
     const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
-    expect(url).toBe("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent");
+    expect(url).toBe("https://generativelanguage.googleapis.com/v1beta/interactions");
     const requestBody = JSON.parse(String(init.body));
-    expect(requestBody.tools).toEqual([{ googleSearchRetrieval: {} }]);
-    expect(requestBody.contents[0].parts[0].text).toContain("recent ocean research");
+    expect(requestBody.model).toBe("gemini-3.5-flash-lite");
+    expect(requestBody.tools).toBeUndefined();
+    expect(requestBody.input).toContain("no live web browsing");
+    expect(requestBody.input).toContain("rank restaurants");
   });
 
-  it("rejects an ungrounded provider answer rather than returning uncited AI prose", async () => {
+  it("returns a safe error when the model response has no answer", async () => {
     vi.stubEnv("QUERIFY_GEMINI_API_KEY", "server-only-test-key");
-    vi.stubEnv("QUERIFY_GEMINI_MODEL", "");
-    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({
-      candidates: [{ content: { parts: [{ text: "No sources." }] } }],
-    }), { status: 200 })));
-    const result = await postResearch({ query: "Tell me about current events" });
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify(textOnlyPayload(" ")), { status: 200 })));
+    const result = await postResearch({ query: "Tell me about science." });
     expect(result.status).toBe(502);
-    expect(result.body.code).toBe("GEMINI_SEARCH_FAILED");
+    expect(result.body.code).toBe("GEMINI_TEXT_GENERATION_FAILED");
+    expect(result.body.error).toContain("Failure stage invalid-output");
     expect(result.body.error).toContain("No demo data was used");
   });
 
-  it("returns safe guidance when Gemini rejects the key or access", async () => {
+  it("returns safe guidance when Gemini rejects the key or model access", async () => {
     vi.stubEnv("QUERIFY_GEMINI_API_KEY", "server-only-test-key");
     vi.stubGlobal("fetch", vi.fn(async () => new Response("private provider body", { status: 403 })));
-    const result = await postResearch({ query: "What is new in astronomy?" });
+    const result = await postResearch({ query: "What is photosynthesis?" });
     expect(result.status).toBe(502);
     expect(result.body.code).toBe("GEMINI_ACCESS_DENIED");
     expect(result.body.error).toContain("No demo data was used");
     expect(result.body.error).not.toContain("private provider body");
   });
 
-  it("returns quota guidance when Gemini rate-limits a request", async () => {
+  it("returns a clear free-tier quota response", async () => {
     vi.stubEnv("QUERIFY_GEMINI_API_KEY", "server-only-test-key");
     vi.stubGlobal("fetch", vi.fn(async () => new Response("private provider body", { status: 429 })));
-    const result = await postResearch({ query: "What is new in astronomy?" });
-    expect(result.status).toBe(502);
+    const result = await postResearch({ query: "What is photosynthesis?" });
+    expect(result.status).toBe(429);
     expect(result.body.code).toBe("GEMINI_QUOTA_LIMIT");
+    expect(result.body.error).toContain("Free-Tier request limit");
+  });
+
+  it("exposes a safe upstream status for generic failures without echoing provider bodies", async () => {
+    vi.stubEnv("QUERIFY_GEMINI_API_KEY", "server-only-test-key");
+    vi.stubGlobal("fetch", vi.fn(async () => new Response("private provider body", { status: 500 })));
+    const result = await postResearch({ query: "What is photosynthesis?" });
+    expect(result.status).toBe(502);
+    expect(result.body.error).toContain("Provider HTTP 500");
+    expect(result.body.error).not.toContain("private provider body");
+    expect(result.body.error).not.toContain("server-only-test-key");
+  });
+
+  it("reports a safe retry message when the model request times out", async () => {
+    vi.stubEnv("QUERIFY_GEMINI_API_KEY", "server-only-test-key");
+    vi.stubGlobal("fetch", vi.fn(async () => {
+      throw new DOMException("request timed out", "TimeoutError");
+    }));
+    const result = await postResearch({ query: "private question" });
+    expect(result.status).toBe(502);
+    expect(result.body.error).toContain("Failure stage timeout");
+    expect(result.body.error).not.toContain("private question");
+    expect(result.body.error).not.toContain("server-only-test-key");
   });
 
   it("returns sanitized Google request diagnostics without echoing secrets", async () => {
@@ -133,7 +143,7 @@ describe("Vercel general Web Research endpoint", () => {
 
   it("allows general questions that contain SQL-like words because this route is not a SQL executor", async () => {
     vi.stubEnv("QUERIFY_GEMINI_API_KEY", "server-only-test-key");
-    const fetchMock = vi.fn(async () => new Response(JSON.stringify(generateContentPayload()), { status: 200 }));
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify(textOnlyPayload()), { status: 200 }));
     vi.stubGlobal("fetch", fetchMock);
     const result = await postResearch({ query: "What does DROP mean in geology?" });
     expect(result.status).toBe(200);

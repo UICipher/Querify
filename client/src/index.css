@@ -800,7 +800,7 @@ body { letter-spacing: -0.012em; }
 }
 
 
-/* New Google-grounded Web Research workspace: editorial layout instead of a dashboard of boxes. */
+/* Knowledge Answers workspace: editorial layout instead of a dashboard of boxes. */
 .footer-credit-lead { color: #e5c5a1; font-weight: 800; letter-spacing: .01em; }
 .web-research-mode.console-page {
   display: grid !important;
@@ -1165,3 +1165,102 @@ body { background: var(--querify-cool-bg) !important; color: #e4eaf4 !important;
 .architecture-block > span,
 .vision-card > span,
 .feature-card > span { color: #a8bad6 !important; }
+
+
+/* Editorial landing-page polish: fewer boxed surfaces, clearer focus, same cursor spotlight. */
+.overview-page .hero-kicker {
+  padding: 5px 0 5px 11px !important;
+  border: 0 !important;
+  border-left: 2px solid rgba(157, 178, 208, .48) !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  letter-spacing: .14em !important;
+  text-transform: uppercase;
+}
+.overview-page .hero-kicker .live-dot {
+  width: 5px;
+  height: 5px;
+  background: #bac8dc !important;
+  box-shadow: none !important;
+}
+.overview-page .hero-actions > .primary-button {
+  border-radius: 7px !important;
+  border-color: rgba(169, 187, 213, .36) !important;
+  background: #465b77 !important;
+  box-shadow: none !important;
+  transition: transform .22s ease, background .22s ease, border-color .22s ease !important;
+}
+.overview-page .hero-actions > .primary-button:hover {
+  transform: translateY(-2px) !important;
+  border-color: rgba(196, 210, 231, .6) !important;
+  background: #526b8a !important;
+  box-shadow: 0 9px 22px rgba(4, 9, 16, .24) !important;
+}
+.overview-page .hero-actions > .secondary-button {
+  padding-inline: 5px !important;
+  border: 0 !important;
+  border-bottom: 1px solid rgba(160, 177, 201, .38) !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  transition: color .2s ease, border-color .2s ease, transform .2s ease !important;
+}
+.overview-page .hero-actions > .secondary-button:hover {
+  transform: translateY(-2px) !important;
+  border-bottom-color: rgba(207, 219, 238, .8) !important;
+  color: #eff3f8 !important;
+  box-shadow: none !important;
+}
+.overview-page .pipeline-card {
+  border-radius: 16px !important;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, .22) !important;
+  transition: border-color .25s ease, transform .25s ease, box-shadow .25s ease !important;
+}
+.overview-page .pipeline-card:hover {
+  transform: translateY(-2px) !important;
+  border-color: rgba(158, 180, 212, .34) !important;
+  box-shadow: 0 18px 42px rgba(0, 0, 0, .28) !important;
+}
+.overview-page .pipeline-prompt {
+  border-radius: 9px 3px 9px 3px !important;
+  border-left: 2px solid rgba(160, 180, 207, .52) !important;
+}
+.overview-page .flow-grid:not(.four) {
+  column-gap: clamp(22px, 4vw, 52px) !important;
+}
+.overview-page .flow-grid:not(.four) .feature-card {
+  position: relative;
+  padding: 19px 12px 17px 0 !important;
+  border: 0 !important;
+  border-top: 1px solid rgba(144, 163, 190, .23) !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  transition: transform .24s ease, border-color .24s ease, background .24s ease !important;
+}
+.overview-page .flow-grid:not(.four) .feature-card:hover {
+  transform: translateY(-3px) !important;
+  border-top-color: rgba(177, 197, 225, .6) !important;
+  background: linear-gradient(145deg, rgba(134, 157, 191, .045), transparent 78%) !important;
+  box-shadow: none !important;
+}
+.overview-page .hero-actions > button:focus-visible,
+.overview-page .pipeline-step-button:focus-visible,
+.overview-page .pipeline-controls button:focus-visible {
+  outline: 2px solid #b6c8e4 !important;
+  outline-offset: 4px !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  .overview-page .hero-actions > button,
+  .overview-page .pipeline-card,
+  .overview-page .flow-grid:not(.four) .feature-card {
+    transition: none !important;
+  }
+  .overview-page .hero-actions > .primary-button:hover,
+  .overview-page .hero-actions > .secondary-button:hover,
+  .overview-page .pipeline-card:hover,
+  .overview-page .flow-grid:not(.four) .feature-card:hover {
+    transform: none !important;
+  }
+}

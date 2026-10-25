@@ -15,50 +15,41 @@ export type GeminiResearchResult = {
   searchSuggestionsHtml: string;
 };
 
+const FREE_TEXT_MODEL = "gemini-3.5-flash-lite";
+const REQUEST_TIMEOUT_MS = 50_000;
+const MAX_ANSWER_LENGTH = 20_000;
+
 export class GeminiResearchConfigurationError extends Error {
   readonly code = "GEMINI_NOT_CONFIGURED";
 
-  constructor() {
-    super("Web Research needs QUERIFY_GEMINI_API_KEY in the server environment.");
+  constructor(message = "Text-only answers require QUERIFY_GEMINI_API_KEY in the server environment.") {
+    super(message);
     this.name = "GeminiResearchConfigurationError";
   }
 }
 
 export class GeminiResearchProviderError extends Error {
-  readonly code = "GEMINI_SEARCH_FAILED";
+  readonly code = "GEMINI_TEXT_GENERATION_FAILED";
 
   constructor(
     readonly status?: number,
     readonly providerStatus?: string,
-    readonly providerMessage?: string
+    readonly providerMessage?: string,
+    readonly failureStage?: "network" | "timeout" | "invalid-json" | "invalid-output"
   ) {
-    super("Google Search grounding did not return a usable sourced answer.");
+    super("Gemini did not return a usable text-only answer.");
     this.name = "GeminiResearchProviderError";
   }
 }
 
-const RESEARCH_INSTRUCTIONS = `Use Google Search grounding to research the user's question before answering. The question may concern any topic or country. Prefer current, primary, and credible sources when relevant. Be clear about dates, disagreements, uncertainty, and what the sources do not establish. Do not invent facts or citations. Use concise, readable prose in the user's language. Do not claim that your search covers the entire internet.`;
-const REQUEST_TIMEOUT_MS = 50_000;
+const TEXT_ONLY_INSTRUCTIONS = `Answer the user's question directly from your existing knowledge. This request has no live web browsing, Search grounding, external files, or citations. Never say that you searched, checked current sources, or verified facts online. Do not invent sources, citations, URLs, dates, prices, rankings, or other factual details. For current, local, or rapidly changing questions, clearly say that you cannot verify the latest information and that your answer may be outdated. For subjective rankings such as a world's top ten restaurants, explain that rankings depend on the publisher, criteria, and date, and label any list as an unverified starting point rather than a definitive current ranking. If you do not know enough to answer reliably, say so and ask a focused clarification rather than filling gaps with guesses. Keep the answer concise, structured, and in the user's language.`;
 
-type TextOutputBlock = {
-  text: string;
-  annotations: unknown[];
-};
+type RecordValue = Record<string, unknown>;
 
-function asRecord(value: unknown): Record<string, unknown> | null {
+function asRecord(value: unknown): RecordValue | null {
   return typeof value === "object" && value !== null
-    ? value as Record<string, unknown>
+    ? value as RecordValue
     : null;
-}
-
-function safeHttpsUrl(value: unknown): string | null {
-  if (typeof value !== "string" || value.length > 2048) return null;
-  try {
-    const url = new URL(value);
-    return url.protocol === "https:" ? url.toString() : null;
-  } catch {
-    return null;
-  }
 }
 
 function safeProviderMessage(value: unknown, secrets: string[]): string | undefined {
@@ -71,198 +62,37 @@ function safeProviderMessage(value: unknown, secrets: string[]): string | undefi
   return message.slice(0, 240) || undefined;
 }
 
-function integerField(
-  record: Record<string, unknown>,
-  snakeCase: string,
-  camelCase: string
-): number | null {
-  const value = record[snakeCase] ?? record[camelCase];
-  return typeof value === "number" && Number.isInteger(value) && value >= 0
-    ? value
-    : null;
-}
-
-function addSource(
-  sources: GroundedSource[],
-  sourceIndexByUrl: Map<string, number>,
-  rawUrl: unknown,
-  rawTitle: unknown
-): number | null {
-  const url = safeHttpsUrl(rawUrl);
-  if (!url) return null;
-
-  const existingIndex = sourceIndexByUrl.get(url);
-  if (existingIndex !== undefined) return existingIndex;
-
-  const title = typeof rawTitle === "string" && rawTitle.trim()
-    ? rawTitle.trim().slice(0, 240)
-    : new URL(url).hostname;
-  const index = sources.push({ title, url }) - 1;
-  sourceIndexByUrl.set(url, index);
-  return index;
-}
-
-function addCitation(
-  citations: GroundedCitation[],
-  endIndex: number,
-  sourceIndices: number[]
-): void {
-  const uniqueIndices = [...new Set(sourceIndices)];
-  if (!uniqueIndices.length) return;
-  const existing = citations.find(citation => citation.endIndex === endIndex);
-  if (existing) {
-    for (const sourceIndex of uniqueIndices) {
-      if (!existing.sourceIndices.includes(sourceIndex)) existing.sourceIndices.push(sourceIndex);
-    }
-    return;
-  }
-  citations.push({ endIndex, sourceIndices: uniqueIndices });
-}
-
-function validateResult(result: GeminiResearchResult): GeminiResearchResult {
-  const answer = result.answer.trim();
-  const searchSuggestionsHtml = result.searchSuggestionsHtml.trim();
-  if (
-    !answer ||
-    answer.length > 20_000 ||
-    !result.sources.length ||
-    !result.citations.length ||
-    !searchSuggestionsHtml ||
-    searchSuggestionsHtml.length > 50_000
-  ) {
-    throw new GeminiResearchProviderError();
-  }
-  return { ...result, answer, searchSuggestionsHtml };
-}
-
-function parseInteractionsResult(payload: Record<string, unknown>): GeminiResearchResult {
-  const interaction = asRecord(payload.interaction) ?? payload;
-  const steps = Array.isArray(interaction.steps) ? interaction.steps : [];
-  const textBlocks: TextOutputBlock[] = [];
-  const suggestions: string[] = [];
-
-  for (const value of steps) {
-    const step = asRecord(value);
-    if (!step) continue;
-
-    if (step.type === "google_search_result") {
-      const results = Array.isArray(step.result)
-        ? step.result
-        : step.result
-          ? [step.result]
-          : [];
-      for (const resultValue of results) {
-        const result = asRecord(resultValue);
-        const suggestion = result?.search_suggestions ?? result?.searchSuggestions;
-        if (typeof suggestion === "string" && suggestion.trim()) {
-          suggestions.push(suggestion.trim());
-        }
-      }
-    }
-
-    if (step.type !== "model_output" || !Array.isArray(step.content)) continue;
-    for (const contentValue of step.content) {
+function outputTextFromSteps(value: unknown): string {
+  if (!Array.isArray(value)) return "";
+  return value.flatMap(stepValue => {
+    const step = asRecord(stepValue);
+    if (step?.type !== "model_output" || !Array.isArray(step.content)) return [];
+    return step.content.flatMap(contentValue => {
       const content = asRecord(contentValue);
-      if (content?.type !== "text" || typeof content.text !== "string") continue;
-      textBlocks.push({
-        text: content.text,
-        annotations: Array.isArray(content.annotations) ? content.annotations : [],
-      });
-    }
-  }
-
-  const joinedAnswer = textBlocks.map(block => block.text).join("\n");
-  const leadingWhitespace = joinedAnswer.length - joinedAnswer.trimStart().length;
-  const answer = joinedAnswer.trim();
-  const sources: GroundedSource[] = [];
-  const sourceIndexByUrl = new Map<string, number>();
-  const citations: GroundedCitation[] = [];
-  let blockOffset = 0;
-
-  for (const block of textBlocks) {
-    for (const annotationValue of block.annotations) {
-      const annotation = asRecord(annotationValue);
-      if (annotation?.type !== "url_citation") continue;
-      const blockEndIndex = integerField(annotation, "end_index", "endIndex");
-      if (blockEndIndex === null || blockEndIndex > block.text.length) continue;
-      const sourceIndex = addSource(sources, sourceIndexByUrl, annotation.url, annotation.title);
-      if (sourceIndex === null) continue;
-      const endIndex = blockOffset + blockEndIndex - leadingWhitespace;
-      if (endIndex < 0 || endIndex > answer.length) continue;
-      addCitation(citations, endIndex, [sourceIndex]);
-    }
-    blockOffset += block.text.length + 1;
-  }
-
-  return validateResult({
-    answer,
-    sources,
-    citations,
-    searchSuggestionsHtml: suggestions.join("\n"),
-  });
+      return content?.type === "text" && typeof content.text === "string"
+        ? [content.text]
+        : [];
+    });
+  }).join("\n");
 }
 
-function parseGenerateContentResult(payload: Record<string, unknown>): GeminiResearchResult {
-  const candidates = Array.isArray(payload.candidates) ? payload.candidates : [];
-  const candidate = asRecord(candidates[0]);
-  const content = asRecord(candidate?.content);
-  const parts = Array.isArray(content?.parts) ? content.parts : [];
-  const answerParts = parts
-    .map(part => asRecord(part)?.text)
-    .filter((text): text is string => typeof text === "string");
-  const joinedAnswer = answerParts.join("\n");
-  const leadingWhitespace = joinedAnswer.length - joinedAnswer.trimStart().length;
-  const answer = joinedAnswer.trim();
-
-  const metadata = asRecord(candidate?.groundingMetadata ?? candidate?.grounding_metadata);
-  const chunks = Array.isArray(metadata?.groundingChunks)
-    ? metadata.groundingChunks
-    : Array.isArray(metadata?.grounding_chunks)
-      ? metadata.grounding_chunks
-      : [];
-  const sources: GroundedSource[] = [];
-  const sourceIndexByUrl = new Map<string, number>();
-  const chunkIndexToSourceIndex = new Map<number, number>();
-
-  chunks.forEach((chunkValue, chunkIndex) => {
-    const chunk = asRecord(chunkValue);
-    const web = asRecord(chunk?.web);
-    const sourceIndex = addSource(sources, sourceIndexByUrl, web?.uri ?? web?.url, web?.title);
-    if (sourceIndex !== null) chunkIndexToSourceIndex.set(chunkIndex, sourceIndex);
-  });
-
-  const rawSupports = Array.isArray(metadata?.groundingSupports)
-    ? metadata.groundingSupports
-    : Array.isArray(metadata?.grounding_supports)
-      ? metadata.grounding_supports
-      : [];
-  const citations: GroundedCitation[] = [];
-  for (const supportValue of rawSupports) {
-    const support = asRecord(supportValue);
-    const segment = asRecord(support?.segment);
-    if (!segment) continue;
-    const rawEndIndex = integerField(segment, "end_index", "endIndex");
-    if (rawEndIndex === null) continue;
-    const endIndex = rawEndIndex - leadingWhitespace;
-    if (endIndex < 0 || endIndex > answer.length) continue;
-
-    const rawChunkIndices = support?.groundingChunkIndices ?? support?.grounding_chunk_indices;
-    if (!Array.isArray(rawChunkIndices)) continue;
-    const sourceIndices = rawChunkIndices
-      .filter((index): index is number => typeof index === "number" && Number.isInteger(index))
-      .map(index => chunkIndexToSourceIndex.get(index))
-      .filter((index): index is number => index !== undefined);
-    addCitation(citations, endIndex, sourceIndices);
+function parseInteractionsResult(payload: RecordValue): GeminiResearchResult {
+  const interaction = asRecord(payload.interaction) ?? payload;
+  const directText = interaction.output_text ?? interaction.outputText;
+  const rawAnswer = typeof directText === "string"
+    ? directText
+    : outputTextFromSteps(interaction.steps);
+  const answer = rawAnswer.trim();
+  if (!answer || answer.length > MAX_ANSWER_LENGTH) {
+    throw new GeminiResearchProviderError(undefined, "INVALID_OUTPUT", undefined, "invalid-output");
   }
 
-  const searchEntryPoint = asRecord(metadata?.searchEntryPoint ?? metadata?.search_entry_point);
-  const suggestions = searchEntryPoint?.renderedContent ?? searchEntryPoint?.rendered_content;
-  return validateResult({
+  return {
     answer,
-    sources,
-    citations,
-    searchSuggestionsHtml: typeof suggestions === "string" ? suggestions : "",
-  });
+    sources: [],
+    citations: [],
+    searchSuggestionsHtml: "",
+  };
 }
 
 export async function requestGeminiResearch(
@@ -270,26 +100,25 @@ export async function requestGeminiResearch(
   fetcher: typeof fetch = fetch
 ): Promise<GeminiResearchResult> {
   const apiKey = process.env.QUERIFY_GEMINI_API_KEY?.trim();
-  const model = process.env.QUERIFY_GEMINI_MODEL?.trim() || "gemini-2.5-flash";
-  if (!apiKey || !/^[a-zA-Z0-9._-]{1,100}$/.test(model)) {
-    throw new GeminiResearchConfigurationError();
+  const configuredModel = process.env.QUERIFY_GEMINI_MODEL?.trim();
+  if (!apiKey) throw new GeminiResearchConfigurationError();
+  if (configuredModel && configuredModel !== FREE_TEXT_MODEL) {
+    throw new GeminiResearchConfigurationError(
+      `Free text-only mode supports only ${FREE_TEXT_MODEL}; update QUERIFY_GEMINI_MODEL in the server environment.`
+    );
   }
 
-  const input = `${RESEARCH_INSTRUCTIONS}\n\nUser question:\n${query}`;
-  const useGenerateContent = /^gemini-(?:2\.5|2\.0)-/.test(model);
-  const url = useGenerateContent
-    ? `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`
-    : "https://generativelanguage.googleapis.com/v1beta/interactions";
-  const requestBody = useGenerateContent
-    ? {
-        contents: [{ parts: [{ text: input }] }],
-        tools: [{ googleSearchRetrieval: {} }],
-      }
-    : {
-        model,
-        input,
-        tools: [{ type: "google_search" }],
-      };
+  const input = `${TEXT_ONLY_INSTRUCTIONS}\n\nUser question:\n${query}`;
+  const url = "https://generativelanguage.googleapis.com/v1beta/interactions";
+  const requestBody = {
+    model: FREE_TEXT_MODEL,
+    input,
+    generation_config: {
+      max_output_tokens: 1024,
+      thinking_level: "low",
+      tool_choice: "none",
+    },
+  };
 
   let response: Response;
   try {
@@ -303,8 +132,15 @@ export async function requestGeminiResearch(
       body: JSON.stringify(requestBody),
       signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     });
-  } catch {
-    throw new GeminiResearchProviderError();
+  } catch (error) {
+    const errorName = error instanceof Error ? error.name : "";
+    const timedOut = errorName === "TimeoutError" || errorName === "AbortError";
+    throw new GeminiResearchProviderError(
+      undefined,
+      timedOut ? "REQUEST_TIMEOUT" : "NETWORK_ERROR",
+      undefined,
+      timedOut ? "timeout" : "network"
+    );
   }
 
   if (!response.ok) {
@@ -316,9 +152,10 @@ export async function requestGeminiResearch(
     const providerMessage = safeProviderMessage(providerError?.message, [apiKey, query]);
     throw new GeminiResearchProviderError(response.status, providerStatus, providerMessage);
   }
+
   const payload = asRecord(await response.json().catch(() => null));
-  if (!payload) throw new GeminiResearchProviderError();
-  return useGenerateContent
-    ? parseGenerateContentResult(payload)
-    : parseInteractionsResult(payload);
+  if (!payload) {
+    throw new GeminiResearchProviderError(undefined, "INVALID_JSON", undefined, "invalid-json");
+  }
+  return parseInteractionsResult(payload);
 }
