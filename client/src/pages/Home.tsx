@@ -101,12 +101,12 @@ type TeamMember = {
 };
 const clarificationStatus = "clarification_needed" as const;
 const webResearchSuggestions = [
-  "What are the most important climate and energy developments this month?",
-  "Explain recent advances in treating Alzheimer's disease and link the evidence.",
-  "Compare the latest economic outlooks from major global institutions.",
-  "What changed in AI regulation across major regions this year?",
-  "Summarize recent space science discoveries from primary sources.",
-  "Find current guidance on safe drinking water from public health authorities.",
+  "What are common ways restaurants are ranked internationally?",
+  "How do cities make drinking water safe?",
+  "What makes long-duration energy storage useful?",
+  "How does a vaccine train the immune system?",
+  "How do different economic schools explain inflation?",
+  "Why do stars have different colors?",
 ];
 
 const team: TeamMember[] = [
@@ -204,29 +204,29 @@ const pipelineStages = [
     label: "Step 1",
     title: "YOUR QUESTION",
     badge: "Any topic",
-    prompt: "Start with any question you want to research.",
-    detail: "No fixed dataset or topic list is required.",
+    prompt: "Ask in plain language about the topic you have in mind.",
+    detail: "Knowledge answers are separate from the SQL demo data.",
   },
   {
     label: "Step 2",
-    title: "PUBLIC WEB SEARCH",
-    badge: "Google Search grounding",
-    prompt: "Gemini searches the public web for sources related to your question.",
-    detail: "Coverage depends on pages available in Google's index.",
+    title: "MODEL KNOWLEDGE",
+    badge: "No live search",
+    prompt: "A text-only model responds from information it already knows.",
+    detail: "No browser or web-search tool is enabled.",
   },
   {
     label: "Step 3",
-    title: "SOURCE CHECK",
-    badge: "Citations required",
-    prompt: "Claims are returned with links to the sources used.",
-    detail: "Open a source to check the original page and context.",
+    title: "CHECK THE LIMITS",
+    badge: "No citations",
+    prompt: "Current facts, rankings, and local details may be outdated.",
+    detail: "Verify time-sensitive information independently.",
   },
   {
     label: "Step 4",
-    title: "GROUNDED ANSWER",
+    title: "KNOWLEDGE ANSWER",
     badge: "No demo-data fallback",
-    prompt: "A source-linked answer for the topic you asked about.",
-    detail: "If live research is unavailable, Querify reports the error instead of inventing results.",
+    prompt: "Get a clear response or an explicit service error.",
+    detail: "The app never substitutes synthetic SQL rows.",
   },
 ];
 
@@ -771,23 +771,23 @@ export default function Home() {
       <div className="header-actions">
         <select
           className="db-selector"
-          aria-label={webResearchMode ? "Current web research source" : "Current SQL demo database"}
+          aria-label={webResearchMode ? "Current knowledge answer mode" : "Current SQL demo database"}
           disabled
         >
-          <option>{webResearchMode ? "Google Search · Public web" : "SQL Demo · Synthetic data"}</option>
+          <option>{webResearchMode ? "Knowledge Answers · Text only" : "SQL Demo · Synthetic data"}</option>
         </select>
         <button
           className="auth-button"
           onClick={() =>
             notify(webResearchMode
-              ? "Web Research requires a server-side Gemini key; it is never exposed in the browser."
+              ? "Knowledge Answers require a server-side Gemini key; it is never exposed in the browser."
               : "SQL Demo uses read-only synthetic data.")
           }
         >
           <LockKeyhole size={13} /> Security & Auth
         </button>
         <span className="demo-badge">
-          <span /> {webResearchMode ? "Web Research" : "SQL Demo"}
+          <span /> {webResearchMode ? "Knowledge Answers" : "SQL Demo"}
         </span>
         <a
           href="https://github.com/UICipher/Querify"
@@ -816,14 +816,13 @@ export default function Home() {
           </span>
         </div>
         <p>
-          Ask a question. Follow the sources.
+          Ask a question. Explore what is known.
           <br />
-          Research any topic against Google's public web index, or switch to the
-          separate read-only SQL demo. Web answers are source-linked; demo rows
-          stay clearly labeled as synthetic.
+          Knowledge Answers use existing model knowledge, not a live web search,
+          and may be out of date. The separate read-only SQL demo uses synthetic rows.
         </p>
         <div className="footer-proof">
-          <Search size={14} /> Google Search citations <span>•</span> SQL demo remains separate
+          <BookOpen size={14} /> Text-only answers <span>•</span> SQL demo remains separate
         </div>
       </div>
       <div>
@@ -879,8 +878,8 @@ export default function Home() {
           </strong>.
         </span>
         <span className="footer-data-note">
-          {webResearchMode ? <Search size={13} /> : <Database size={13} />}
-          {webResearchMode ? " Web research · citations linked" : " Synthetic SQL demo · read-only"}
+          {webResearchMode ? <BookOpen size={13} /> : <Database size={13} />}
+          {webResearchMode ? " Knowledge answer · not live web" : " Synthetic SQL demo · read-only"}
         </span>
       </div>
     </footer>
@@ -890,18 +889,18 @@ export default function Home() {
     <section className="page overview-page">
       <div className="hero">
         <div className="hero-kicker">
-          <span className="live-dot" /> Querify · Web Research + SQL{" "}
-          <b>Sources linked</b>
+          <span className="live-dot" /> Querify · Knowledge Answers + SQL{" "}
+          <b>No live search</b>
         </div>
         <h1>
-          Ask anything.
+          Ask a question.
           <br />
-          <em>Follow the evidence.</em>
+          <em>Explore what is known.</em>
         </h1>
         <p>
-          Research any topic with Google's public web index and inspect the
-          sources, or switch to a separate read-only SQL demo built on clearly
-          labeled synthetic data. Web research requires a server-side Gemini key.
+          Get a text-only answer from model knowledge. There is no live web search
+          or citation check, so current facts may be outdated or incomplete. The
+          separate read-only SQL demo uses clearly labeled synthetic data.
         </p>
         <div className="hero-actions">
           <button
@@ -911,7 +910,7 @@ export default function Home() {
               go("console");
             }}
           >
-            → &nbsp; Explore web research <ArrowRight size={15} />
+            → &nbsp; Explore knowledge answers <ArrowRight size={15} />
           </button>
           <button
             className="secondary-button interactive-btn transition-all duration-200 ease-out hover:scale-[1.01] hover:-translate-y-0.5 hover:shadow-lg hover:shadow-cyan-500/10 active:scale-[0.98] cursor-pointer"
@@ -925,10 +924,10 @@ export default function Home() {
         </div>
         <div
           className="pipeline-card"
-          aria-label="How Querify performs live web research"
+          aria-label="How Querify provides text-only knowledge answers"
         >
           <div className="pipeline-top">
-            <span>querify-research // Google Search grounding</span>
+            <span>querify-answers // no live web search</span>
             <div
               className="pipeline-stepper"
               role="group"
@@ -987,17 +986,17 @@ export default function Home() {
                   go("console");
                 }}
               >
-                Run a live research question →
+                Try a sample question →
               </button>
             </div>
           </div>
         </div>
       </div>
       <div className="section-heading">
-        <span>RESEARCH FLOW</span>
+        <span>KNOWLEDGE ANSWER FLOW</span>
         <h2>How Querify Works</h2>
         <p>
-          Three clear steps from an open question to cited evidence.
+          Three clear steps from an open question to an answer with limits disclosed.
         </p>
       </div>
       <div className="flow-grid">
@@ -1005,17 +1004,17 @@ export default function Home() {
           {
             n: "01",
             title: "Ask any topic",
-            copy: "Start with a question about any subject. Web Research is separate from the SQL demo and is not limited to its sample database.",
+            copy: "Start with a question about any subject. Knowledge Answers are separate from the SQL demo and do not use its sample database.",
           },
           {
             n: "02",
-            title: "Search the public web",
-            copy: "Gemini uses Google Search grounding to find relevant pages from Google's public web index. Coverage depends on the pages available there.",
+            title: "Use model knowledge",
+            copy: "A text-only model responds from information it already knows; it does not search the live web.",
           },
           {
             n: "03",
-            title: "Review linked sources",
-            copy: "Read a synthesized response with citations, then open the original pages to check the evidence for yourself.",
+            title: "Check current facts",
+            copy: "There are no citations or live verification. Check current sources independently for facts that may change.",
           },
         ].map(item => (
           <article className="feature-card" data-cursor-spotlight key={item.n}>
@@ -1030,7 +1029,7 @@ export default function Home() {
         <h2>A separate, read-only SQL workspace.</h2>
         <p>
           This workspace runs against clearly labeled synthetic rows and stays
-          separate from live Web Research.
+          separate from Knowledge Answers.
         </p>
       </div>
       <div className="flow-grid four product-surface">
@@ -1069,18 +1068,18 @@ export default function Home() {
     <section className={`page console-page ${focusMode ? "focus-mode" : ""} ${webResearchMode ? "web-research-mode" : "sql-demo-mode"}`}>
       <div className="page-heading">
         <div>
-          <span>{webResearchMode ? "› OPEN WEB RESEARCH" : "› STRUCTURED QUERY WORKSPACE"}</span>
-          <h2>{webResearchMode ? "Ask anything. Search beyond the demo." : "From question to verified SQL."}</h2>
-          <p>
-            {webResearchMode
-              ? "Gemini searches Google's public web index for this question and returns a sourced answer. Sources vary by topic and availability; this is broad search, not an unlimited copy of the internet."
+              <span>{webResearchMode ? "› OPEN QUESTIONS · TEXT ONLY" : "› STRUCTURED QUERY WORKSPACE"}</span>
+              <h2>{webResearchMode ? "Ask outside the demo data." : "From question to verified SQL."}</h2>
+              <p>
+                {webResearchMode
+                  ? "A free text-only model answers from existing knowledge. There is no live web search or citations; time-sensitive facts may be outdated or incomplete."
               : "Results use synthetic sample tables, never a live database. A configured model may draft the SQL; otherwise built-in rules handle supported questions. Querify labels the actual planner on each result."}
           </p>
         </div>
         <div className="page-heading-actions">
           <div className="guard-pill">
-            {webResearchMode ? <Search size={14} /> : <ShieldCheck size={14} />}
-            {webResearchMode ? "Google Search · citations" : "Read-only SQL Guard"}
+            {webResearchMode ? <BookOpen size={14} /> : <ShieldCheck size={14} />}
+            {webResearchMode ? "Knowledge only · no live search" : "Read-only SQL Guard"}
           </div>
           <button
             className={`focus-mode-toggle ${focusMode ? "active" : ""}`}
@@ -1107,7 +1106,7 @@ export default function Home() {
               setShowRecoveryPrompts(false);
             }}
           >
-            <Search size={14} /> Web Research
+            <BookOpen size={14} /> Knowledge Answers
           </button>
           <button
             type="button"
@@ -1126,7 +1125,7 @@ export default function Home() {
         </div>
         <p className="workspace-mode-note">
           {webResearchMode
-            ? "Search any topic in any language. Each answer is tied to the live search result and its sources; no sample-table fallback."
+            ? "Answers use model knowledge only—no live search or citations. Google Free-Tier prompts may be used to improve products and reviewed by humans; don't enter sensitive or personal information."
             : "Explore the read-only synthetic sample tables. These rows are illustrative, not live business data."}
         </p>
         <div className="input-row">
@@ -1148,14 +1147,14 @@ export default function Home() {
             }}
             onKeyDown={e => e.key === "Enter" && submitQuery()}
             className="focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500 transition-all duration-200"
-            placeholder={webResearchMode ? "Ask about any topic — science, world events, business, culture…" : "e.g. Show restaurants in Seattle rated above 4.5"}
+            placeholder={webResearchMode ? "Ask a question — science, history, business, culture…" : "e.g. Show restaurants in Seattle rated above 4.5"}
           />
           <button
             disabled={isExecuting}
             className="query-button interactive-btn transition-all duration-200 ease-out hover:scale-[1.01] hover:-translate-y-0.5 hover:shadow-lg hover:shadow-cyan-500/10 active:scale-[0.98] cursor-pointer"
             onClick={() => void submitQuery()}
           >
-            {isExecuting ? (webResearchMode ? "Searching…" : "Running…") : (webResearchMode ? "Search web ↵" : "Query ↵")}
+            {isExecuting ? (webResearchMode ? "Answering…" : "Running…") : (webResearchMode ? "Get answer ↵" : "Query ↵")}
           </button>
           <button
             className={`voice-button ${isListening ? "listening" : ""}`}
@@ -1221,7 +1220,7 @@ export default function Home() {
             <div className="prompt-heading">
               <div>
                 <span className="group-label">Explore across topics</span>
-                <p>These are starters, not a fixed catalogue. Ask your own question in any language.</p>
+                <p>These are broad starting points. Current facts are not checked against live sources.</p>
               </div>
               <button
                 className="surprise-button"
@@ -1362,24 +1361,24 @@ export default function Home() {
         <div className="studio-card query-mode-card" data-cursor-spotlight>
           <h3>
             {webResearchMode ? <Search size={15} /> : <Table2 size={15} />}
-            {webResearchMode ? "General web research" : "Query planner"}
+            {webResearchMode ? "Open questions" : "Query planner"}
           </h3>
           <p>
             {webResearchMode
-              ? "Gemini can search across topics using Google's public web index, then return a cited answer. Coverage depends on sources found for each question."
+              ? "Gemini 3.5 Flash-Lite answers from existing knowledge only. It cannot check live sources, and answers may be outdated or incomplete."
               : "A configured model can plan the SQL. If no model is available, built-in rules handle supported prompts. Each result says which path ran."}
           </p>
           <div className="guardrail-row">
             <span>{webResearchMode ? "Topic range" : "Planner status"}</span>
-            <b>{webResearchMode ? "GENERAL WEB" : "SHOWN PER RESULT"}</b>
+            <b>{webResearchMode ? "OPEN QUESTIONS" : "SHOWN PER RESULT"}</b>
           </div>
           <div className="guardrail-row">
-            <span>{webResearchMode ? "Citations" : "Model provider"}</span>
-            <b>{webResearchMode ? "SOURCE LINKS" : "OPTIONAL"}</b>
+            <span>{webResearchMode ? "Live web" : "Model provider"}</span>
+            <b>{webResearchMode ? "OFF" : "OPTIONAL"}</b>
           </div>
           <div className="guardrail-row">
-            <span>{webResearchMode ? "Result storage" : "Data"}</span>
-            <b>{webResearchMode ? "NOT SAVED" : "SYNTHETIC SAMPLES"}</b>
+            <span>{webResearchMode ? "App history" : "Data"}</span>
+            <b>{webResearchMode ? "NOT LOGGED" : "SYNTHETIC SAMPLES"}</b>
           </div>
           <button
             className="studio-action"
@@ -1396,7 +1395,7 @@ export default function Home() {
               void submitQuery(sample);
             }}
           >
-            {webResearchMode ? "Try a broad web question" : "Run an example query"} <ArrowRight size={13} />
+              {webResearchMode ? "Try a broad question" : "Run an example query"} <ArrowRight size={13} />
           </button>
         </div>
         {!webResearchMode && <div className="studio-card guardrail-card" data-cursor-spotlight>
@@ -1418,11 +1417,11 @@ export default function Home() {
         </div>}
         <div className="studio-card source-card" data-cursor-spotlight>
           <h3>
-            {webResearchMode ? <Search size={15} /> : <Database size={15} />}
-            {webResearchMode ? "Search boundary" : "Workspace source"}
+            {webResearchMode ? <BookOpen size={15} /> : <Database size={15} />}
+            {webResearchMode ? "Knowledge limits" : "Workspace source"}
           </h3>
           {webResearchMode ? (
-            <p>Publicly indexed web pages only. Search suggestions and source links appear with each answer; results are not cached in Querify.</p>
+            <p>No live web search or citations are available in this free mode. Verify current facts independently. Google may use Free-Tier prompts to improve products and allow human review; do not enter sensitive or personal information.</p>
           ) : (
             <>
               <p>6 seeded sample tables · read-only SQLite execution</p>
@@ -1581,12 +1580,12 @@ export default function Home() {
           />
         ) : (
           <div className="ready-card web-research-ready" data-cursor-spotlight>
-            <div className="ready-icon"><Search size={22} /></div>
-            <h3>{isExecuting ? "Searching current web sources…" : "Start with any question."}</h3>
+            <div className="ready-icon"><BookOpen size={22} /></div>
+            <h3>{isExecuting ? "Preparing an answer…" : "Start with any question."}</h3>
             <p>
               {isExecuting
-                ? "Gemini is checking Google's public web index. The answer will appear with citations and Search Suggestions."
-                : "Querify searches across topics instead of choosing a preset dataset. Every successful research answer needs sources; no demo rows are substituted."}
+                ? "Gemini is preparing a text-only response from existing model knowledge. No live sources are being checked."
+                : "Querify answers open questions from model knowledge instead of choosing a preset dataset. Answers may be outdated or incomplete; no demo rows are substituted."}
             </p>
           </div>
         )
