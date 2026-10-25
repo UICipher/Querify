@@ -53,7 +53,7 @@ export default async function handler(
   if (!takeRateLimitToken(req)) {
     return sendJson(res, 429, {
       code: "RESEARCH_RATE_LIMITED",
-      error: "Too many web research requests. Please wait a minute and try again.",
+      error: "Too many answer requests. Wait a minute and try again.",
     });
   }
 
@@ -64,7 +64,7 @@ export default async function handler(
     if (error instanceof RequestBodyTooLargeError) {
       return sendJson(res, 413, {
         code: "REQUEST_TOO_LARGE",
-        error: "The research request exceeds the 16 KiB size limit.",
+        error: "The question exceeds the 16 KiB request limit.",
       });
     }
     return sendJson(res, 400, {
@@ -77,13 +77,13 @@ export default async function handler(
   if (!query) {
     return sendJson(res, 422, {
       code: "QUERY_REQUIRED",
-      error: "Enter a question to search the public web.",
+      error: "Enter a question to get an answer.",
     });
   }
   if (query.length > 1000) {
     return sendJson(res, 422, {
       code: "QUERY_TOO_LONG",
-      error: "Keep a web research question under 1,000 characters.",
+      error: "Keep a question under 1,000 characters.",
     });
   }
 
@@ -94,20 +94,20 @@ export default async function handler(
     if (error instanceof GeminiResearchConfigurationError) {
       return sendJson(res, 503, {
         code: error.code,
-        error: "Web Research is not configured. Add QUERIFY_GEMINI_API_KEY in Vercel settings. No demo data was used.",
+        error: `${error.message} No demo data was used.`,
       });
     }
     if (error instanceof GeminiResearchProviderError) {
       if (error.status === 401 || error.status === 403) {
         return sendJson(res, 502, {
           code: "GEMINI_ACCESS_DENIED",
-          error: "Google rejected the configured Gemini API key or model access. Verify the key and Google Search access, then retry. No demo data was used.",
+          error: "Google rejected the configured Gemini key or Free-Tier model access. Check the server key and model settings. No demo data was used.",
         });
       }
-      if (error.status === 429) {
-        return sendJson(res, 502, {
+      if (error.status === 429 || error.providerStatus === "RESOURCE_EXHAUSTED") {
+        return sendJson(res, 429, {
           code: "GEMINI_QUOTA_LIMIT",
-          error: "Google Gemini declined this request because of a rate, quota, spend, or plan limit. Check AI Studio limits and confirm the selected model supports Google Search grounding on your tier. No demo data was used.",
+          error: "The Gemini Free-Tier request limit was reached. Wait and retry later; no demo data was used.",
         });
       }
       if (error.status === 400 || error.status === 404) {
@@ -116,17 +116,27 @@ export default async function handler(
           .join(": ");
         return sendJson(res, 502, {
           code: "GEMINI_MODEL_OR_REQUEST_REJECTED",
-          error: `Google rejected the Gemini model or request. Verify the model ID and Google Search support${providerDetails ? `. Google says: ${providerDetails}` : ""}. No demo data was used.`,
+          error: `Google rejected the text-only Gemini model request${providerDetails ? `. Google says: ${providerDetails}` : ""}. No demo data was used.`,
         });
       }
+      console.error("[Knowledge Answers] Gemini request failed", {
+        upstreamStatus: error.status ?? null,
+        providerStatus: error.providerStatus ?? null,
+        failureStage: error.failureStage ?? null,
+      });
+      const safeDiagnostic = error.status
+        ? `Provider HTTP ${error.status}${error.providerStatus ? ` (${error.providerStatus})` : ""}. `
+        : error.failureStage
+          ? `Failure stage ${error.failureStage}. `
+          : `Provider status ${error.providerStatus ?? "unknown"}. `;
       return sendJson(res, 502, {
         code: error.code,
-        error: "Google Search grounding did not return a sourced answer. Check Gemini model access, billing, and key settings, then retry. No demo data was used.",
+        error: `${safeDiagnostic}A text-only answer could not be generated. Try again later. No demo data was used.`,
       });
     }
     return sendJson(res, 500, {
       code: "RESEARCH_ERROR",
-      error: "Web research failed unexpectedly. No demo data was used.",
+      error: "The answer service failed unexpectedly. No demo data was used.",
     });
   }
 }
