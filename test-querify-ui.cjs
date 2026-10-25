@@ -65,25 +65,25 @@ for (const token of [
   "Synthetic sample data",
   "Surprise me",
   "Focus mode",
-  "Web Research",
-  "Search web ↵",
+  "Knowledge Answers",
+  "Get answer ↵",
   "Topic roulette",
   "webResearchMode",
-  "General web research",
-  "Ask anything.",
-  "Follow the evidence.",
-  "Explore web research",
+  "Open questions",
+  "Ask a question.",
+  "Explore what is known.",
+  "Explore knowledge answers",
   "Try SQL demo",
-  "Google Search · Public web",
-  "Current web research source",
-  "Search the public web",
-  "Review linked sources",
+  "Knowledge Answers · Text only",
+  "Current knowledge answer mode",
+  "Use model knowledge",
+  "Check current facts",
   "OPTIONAL SQL DEMO",
   "Synthetic SQL demo · read-only",
-  "querify-research // Google Search grounding",
+  "querify-answers // no live web search",
   "No demo-data fallback",
-  "Run a live research question →",
-  "What are recent advances in long-duration energy storage?",
+  "Try a sample question →",
+  "What are common ways restaurants are ranked internationally?",
   "plannerMode",
   "Run an example query",
   "SQL Demo · Synthetic data",
@@ -93,14 +93,16 @@ for (const token of [
   if (!home.includes(token))
     throw new Error(`Missing UI contract token: ${token}`);
 }
-for (const token of ["searchSuggestionsHtml", "Grounded answer", "Sources returned for this question", "Go deeper", "Find another perspective"]) {
+for (const token of ["MODEL KNOWLEDGE · NO LIVE WEB", "No live citations", "Go deeper", "Compare viewpoints"]) {
   if (!researchPanel.includes(token))
-    throw new Error(`Missing grounded research UI contract: ${token}`);
+    throw new Error(`Missing text-only answer UI contract: ${token}`);
 }
-for (const token of ["google_search", "QUERIFY_GEMINI_API_KEY", "No demo data was used", "GEMINI_SEARCH_FAILED"]) {
+for (const token of ["gemini-3.5-flash-lite", "QUERIFY_GEMINI_API_KEY", "No demo data was used", "GEMINI_TEXT_GENERATION_FAILED", "no live web browsing"]) {
   if (!researchApi.includes(token))
-    throw new Error(`Missing grounded research API contract: ${token}`);
+    throw new Error(`Missing text-only answer API contract: ${token}`);
 }
+if (researchApi.includes("google_search") || researchApi.includes("googleSearchRetrieval"))
+  throw new Error("Free text-only mode must never enable Search grounding");
 for (const token of [
   ".engineering-team-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr))",
   ".person-badge.female",
